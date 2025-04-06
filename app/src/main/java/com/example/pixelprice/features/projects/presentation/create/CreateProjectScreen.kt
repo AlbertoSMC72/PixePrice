@@ -49,7 +49,7 @@ fun CreateProjectScreen(
     var accessibilityNeeds by remember { mutableStateOf("") }
     var compatibilityNeeds by remember { mutableStateOf("") }
     var requiredLanguages by remember { mutableStateOf("") }
-    // El nombre, capital y selfMade ya están en uiState
+    var developerDetails by remember { mutableStateOf("") }
 
     LaunchedEffect(Unit) {
         viewModel.eventFlow.collectLatest { event ->
@@ -126,7 +126,7 @@ fun CreateProjectScreen(
             OutlinedTextField(
                 value = uiState.capital,
                 onValueChange = viewModel::onCapitalChange,
-                label = { Text("Presupuesto Estimado ($ USD) *") }, // Cambiar etiqueta
+                label = { Text("Presupuesto Actual ($ USD) *") }, // Cambiar etiqueta
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), // Corregido
@@ -198,14 +198,29 @@ fun CreateProjectScreen(
             OutlinedTextField( value = requiredLanguages, onValueChange = { requiredLanguages = it }, label = { Text("Idiomas Requeridos (Ej: ES, EN)") }, modifier = Modifier.fillMaxWidth(), singleLine = true, colors = createTextFieldColors() )
             Spacer(modifier = Modifier.height(12.dp))
 
+            // *** NUEVO: OutlinedTextField para Detalles del Desarrollador/Equipo ***
+            OutlinedTextField(
+                value = developerDetails,
+                onValueChange = { developerDetails = it },
+                label = { Text("Detalles Desarrollador/Equipo") },
+                placeholder = { Text("Ej: Yo (5+ años exp, $50/hr) o Equipo (2 dev, 1 QA, $1500/mes)") }, // Placeholder como guía
+                modifier = Modifier.fillMaxWidth().heightIn(min=100.dp), // Altura mínima
+                keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
+                maxLines = 5, // Permitir varias líneas
+                colors = createTextFieldColors()
+                // No añadimos validación de error específica aquí, es parte de la descripción general
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+
             // Checkbox Autogestionado (del ViewModel)
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Checkbox( checked = uiState.isSelfMade, onCheckedChange = viewModel::onSelfMadeChange, /* ... colores ... */ )
-                Text(text = "¿Proyecto autogestionado?", color = Beige)
+                Text(text = "¿Es usted el único encargado de desarrollo?", color = Beige)
             }
+
             Spacer(modifier = Modifier.height(16.dp))
 
             // Mensaje de error general (del ViewModel)
@@ -241,6 +256,7 @@ fun CreateProjectScreen(
                         if (accessibilityNeeds.isNotBlank()) append("Accesibilidad: ${accessibilityNeeds.trim()}\n")
                         if (compatibilityNeeds.isNotBlank()) append("Compatibilidad: ${compatibilityNeeds.trim()}\n")
                         if (requiredLanguages.isNotBlank()) append("Idiomas: ${requiredLanguages.trim()}")
+                        if (developerDetails.isNotBlank()) append("Desarrollo: ${developerDetails.trim()}\n")
                     }.trim() // Eliminar salto de línea final si existe
 
                     // 2. Actualizar el estado de descripción en el ViewModel (si es necesario validarlo)

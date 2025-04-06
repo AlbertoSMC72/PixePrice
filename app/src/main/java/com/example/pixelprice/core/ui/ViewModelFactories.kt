@@ -63,10 +63,6 @@ object BasicViewModelFactory : ViewModelProvider.Factory {
                     @Suppress("UNCHECKED_CAST")
                     RegisterViewModel() as T // Constructor sin args
 
-                modelClass.isAssignableFrom(ProfileViewModel::class.java) ->
-                    @Suppress("UNCHECKED_CAST")
-                    ProfileViewModel() as T // Constructor sin args
-
                 // Añadir otros ViewModels simples aquí si los hubiera en el futuro
                 else ->
                     // Fallback genérico si no es uno de los anteriores
@@ -78,6 +74,17 @@ object BasicViewModelFactory : ViewModelProvider.Factory {
         } catch (e: Exception) {
             throw RuntimeException("Failed to create an instance of $modelClass via BasicViewModelFactory", e)
         }
+    }
+}
+
+class ProfileViewModelFactory(private val application: Application) : ViewModelProvider.Factory {
+    override fun <T : ViewModel> create(modelClass: Class<T>): T {
+        if (modelClass.isAssignableFrom(ProfileViewModel::class.java)) {
+            @Suppress("UNCHECKED_CAST")
+            // Pasamos la Application al constructor del ViewModel
+            return ProfileViewModel(application) as T
+        }
+        throw IllegalArgumentException("Unknown ViewModel class for ProfileViewModelFactory")
     }
 }
 

@@ -4,9 +4,9 @@ import android.Manifest
 import android.app.Application
 import android.content.pm.PackageManager
 import android.net.Uri
-import android.os.Build // Necesario para comprobaciones de versión
+import android.os.Build
 import android.util.Log
-import androidx.core.content.ContextCompat // Necesario para checkSelfPermission
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.pixelprice.features.projects.data.local.ProjectEntity
@@ -19,7 +19,7 @@ import com.example.pixelprice.features.quotations.domain.usecases.RequestQuotati
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import com.example.pixelprice.features.quotations.data.repository.QuotationException
-import kotlinx.coroutines.Job // Importar Job
+import kotlinx.coroutines.Job
 
 // Data class y Events (Completos)
 data class ProjectDetailUiState(
@@ -28,7 +28,8 @@ data class ProjectDetailUiState(
     val isLoadingProject: Boolean = true,
     val isRequestingQuote: Boolean = false,
     val isDownloadingQuote: Boolean = false,
-    val errorMessage: String? = null
+    val errorMessage: String? = null,
+    val parsedDescription: List<Pair<String, String>> = emptyList()
 )
 
 sealed class ProjectDetailEvent {
@@ -37,6 +38,7 @@ sealed class ProjectDetailEvent {
     object RequestCameraPermission : ProjectDetailEvent()
     data class RequestGalleryPermission(val permission: String) : ProjectDetailEvent()
     object RequestLegacyWritePermission : ProjectDetailEvent()
+    object LaunchGallery : ProjectDetailEvent()
 }
 
 class ProjectDetailViewModel(application: Application) : AndroidViewModel(application) {
@@ -83,12 +85,19 @@ class ProjectDetailViewModel(application: Application) : AndroidViewModel(applic
         viewModelScope.launch {
             val result = getProjectByIdUseCase(projectId)
             result.onSuccess { project ->
+                // *** NUEVO: Llamar a parseDescription y actualizar estado ***
+                val parsedDesc = parseDescription(project.description)
                 _uiState.update {
-                    it.copy(isLoadingProject = false, project = project, selectedImageUri = null)
+                    it.copy(
+                        isLoadingProject = false,
+                        project = project,
+                        selectedImageUri = null, // Reiniciar imagen seleccionada al cargar
+                        parsedDescription = parsedDesc // <-- Guardar descripción parseada
+                    )
                 }
                 Log.i("ProjectDetailVM", "Proyecto $projectId cargado. Pendiente: ${project.hasPendingQuotation}")
+//                Log.d("ProjectDetailVM", "Descripción parseada: $parsedDesc")
 
-                // Si el proyecto está pendiente, verificar si ya está listo en el backend
                 if (project.hasPendingQuotation) {
                     checkQuotationStatusIfNeeded(project)
                 }
@@ -139,6 +148,26 @@ class ProjectDetailViewModel(application: Application) : AndroidViewModel(applic
         }
     }
 
+    private fun parseDescription(description: String): List<Pair<String, String>> {
+        return description.split('\n') // Dividir por saltos de línea
+            .mapNotNull { line -> // Procesar cada línea, ignorando las inválidas/vacías
+                val parts = line.split(":", limit = 2) // Dividir SOLO por el primer ':'
+                if (parts.size == 2 && parts[0].isNotBlank()) {
+                    // Tenemos etiqueta y (posiblemente) valor
+                    val label = parts[0].trim()
+                    val value = parts[1].trim().ifEmpty { "-" } // Usar guion si el valor está vacío
+                    Pair(label, value)
+                } else if (line.isNotBlank()) {
+                    // Si no hay ':' o falta la etiqueta, mostrarla como un detalle general
+                    // (Puedes ajustar esto si prefieres ignorar estas líneas)
+                    Pair("Detalle", line.trim())
+                }
+                else {
+                    null // Ignorar líneas completamente vacías
+                }
+            }
+    }
+
 
     /**
      * Actualiza el estado de la UI con el Uri de la imagen seleccionada
@@ -166,16 +195,41 @@ class ProjectDetailViewModel(application: Application) : AndroidViewModel(applic
     /** Comprueba si tiene permiso de galería y lo solicita si no lo tiene. */
     fun requestGalleryAccess() {
         viewModelScope.launch {
+            // 1. Determinar qué permiso se necesita
             val permission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 Manifest.permission.READ_MEDIA_IMAGES
             } else {
                 Manifest.permission.READ_EXTERNAL_STORAGE
             }
+
+            // 2. Comprobar si el permiso ya está concedido (usando el helper interno)
             if (hasPermission(permission)) {
-                // Si tiene permiso, la UI lanzará el selector. Mostrar Toast opcional.
-                _eventFlow.emit(ProjectDetailEvent.ShowToast("Abriendo galería..."))
+                // 3. Si ya está concedido, emitir evento para lanzar la galería
+                Log.d("ProjectDetailVM", "Permiso de galería concedido, emitiendo evento LaunchGallery.")
+                _eventFlow.emit(ProjectDetailEvent.LaunchGallery)
             } else {
+                // 4. Si no está concedido, emitir evento para solicitar el permiso
+                Log.d("ProjectDetailVM", "Permiso de galería no concedido, emitiendo evento RequestGalleryPermission.")
                 _eventFlow.emit(ProjectDetailEvent.RequestGalleryPermission(permission))
+            }
+        }
+    }
+
+    // Helper interno para verificar permisos (ya debería existir)
+    private fun hasPermission(permission: String): Boolean {
+        return ContextCompat.checkSelfPermission(getApplication(), permission) == PackageManager.PERMISSION_GRANTED
+    }
+
+    // Maneja el resultado del permiso de galería (ya debería existir, se mantiene igual)
+    fun onGalleryPermissionResult(granted: Boolean) {
+        viewModelScope.launch {
+            if (granted) {
+                // Si se concedió AHORA, lanzar la galería
+                Log.d("ProjectDetailVM", "Permiso de galería recién concedido, emitiendo evento LaunchGallery.")
+                _eventFlow.emit(ProjectDetailEvent.LaunchGallery)
+            } else {
+                Log.w("ProjectDetailVM", "Permiso de galería denegado por el usuario.")
+                _eventFlow.emit(ProjectDetailEvent.ShowToast("Permiso de galería denegado."))
             }
         }
     }
@@ -192,11 +246,6 @@ class ProjectDetailViewModel(application: Application) : AndroidViewModel(applic
         return true
     }
 
-    /** Helper interno para verificar permisos. */
-    private fun hasPermission(permission: String): Boolean {
-        return ContextCompat.checkSelfPermission(getApplication(), permission) == PackageManager.PERMISSION_GRANTED
-    }
-
     /** Maneja el resultado del permiso de escritura legado. */
     fun onLegacyWritePermissionResult(granted: Boolean) {
         viewModelScope.launch {
@@ -205,14 +254,6 @@ class ProjectDetailViewModel(application: Application) : AndroidViewModel(applic
             } else {
                 _eventFlow.emit(ProjectDetailEvent.ShowToast("Permiso denegado. No se puede descargar."))
             }
-        }
-    }
-
-    /** Maneja el resultado del permiso de galería (Opcional). */
-    fun onGalleryPermissionResult(granted: Boolean) {
-        // La UI ya lanza el selector si granted es true.
-        if (!granted) {
-            viewModelScope.launch { _eventFlow.emit(ProjectDetailEvent.ShowToast("Permiso de galería denegado.")) }
         }
     }
 
@@ -225,6 +266,8 @@ class ProjectDetailViewModel(application: Application) : AndroidViewModel(applic
      * Actualiza el estado local a pendiente y navega a la pantalla de procesamiento.
      */
     fun requestQuotation() {
+        viewModelScope.launch{_eventFlow.emit(ProjectDetailEvent.NavigateToProcessing(currentProjectId))}
+
         val currentProject = _uiState.value.project ?: run {
             viewModelScope.launch{_eventFlow.emit(ProjectDetailEvent.ShowToast("Error: Proyecto no cargado"))}
             return
@@ -233,6 +276,7 @@ class ProjectDetailViewModel(application: Application) : AndroidViewModel(applic
         val imageUriToUpload = _uiState.value.selectedImageUri ?: currentProject.imageUri?.let { Uri.parse(it) }
 
         _uiState.update { it.copy(isRequestingQuote = true, errorMessage = null) }
+
         viewModelScope.launch {
             val result = requestQuotationUseCase(
                 projectName = currentProject.name,
@@ -241,6 +285,7 @@ class ProjectDetailViewModel(application: Application) : AndroidViewModel(applic
                 projectIsSelfMade = currentProject.isSelfMade,
                 mockupImageUri = imageUriToUpload
             )
+
             result.onSuccess {
                 Log.i("ProjectDetailVM", "Solicitud de cotización aceptada para proyecto ${currentProject.id}")
                 // Marcar localmente como pendiente y limpiar ID anterior

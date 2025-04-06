@@ -23,16 +23,18 @@ class AuthRepository {
 
             if (response.isSuccessful) {
                 val loginData: LoginResponse? = response.body()
-                // Validar que la respuesta y los datos esenciales no sean nulos
                 if (loginData?.token != null && loginData.user != null) {
                     Log.i("AuthRepository", "Login API exitoso para usuario ID: ${loginData.user.id}. Guardando datos.")
 
-                    // Guardar token y datos de usuario usando los helpers inicializados
-                    TokenManager.saveToken(loginData.token)
-                    UserInfoProvider.setUserInfo(loginData.user.id, loginData.user.username) // Usa el método helper
+                    TokenManager.saveAuthData(
+                        token = loginData.token,
+                        userId = loginData.user.id,
+                        username = loginData.user.username // Pasar el nombre de usuario también
+                    )
+                    // Opcional: Actualizar UserInfoProvider si todavía se usa en memoria en algún lado
+                    UserInfoProvider.setUserInfo(loginData.user.id, loginData.user.username)
 
-                    Result.success(Unit) // Éxito
-
+                    Result.success(Unit)
                 } else {
                     // Respuesta exitosa (2xx) pero cuerpo inválido o datos faltantes
                     Log.w("AuthRepository", "Respuesta API OK (2xx), pero cuerpo/token/usuario nulo. Body: $loginData")

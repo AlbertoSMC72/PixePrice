@@ -8,6 +8,9 @@ import com.example.pixelprice.features.projects.data.local.ProjectDao
 import com.example.pixelprice.features.projects.data.local.ProjectEntity
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.flow.Flow // *** IMPORTAR Flow ***
+import kotlinx.coroutines.flow.catch // Opcional para manejo de errores
+import kotlinx.coroutines.flow.flowOn // Opcional para asegurar hilo
 
 class ProjectRepository {
 
@@ -56,10 +59,20 @@ class ProjectRepository {
         return dbCall { dao -> dao.insertProject(project) }
     }
 
-    suspend fun getUserProjects(): Result<List<ProjectEntity>> {
+    fun getUserProjects(): Flow<List<ProjectEntity>> { // <-- Cambia tipo y quita suspend
         val userId = UserInfoProvider.userID
-        if (userId == 0) return Result.failure(ProjectException.NotAuthenticated())
-        return dbCall { dao -> dao.getAllProjectsByUserId(userId) }
+        // Validar userId aquí podría ser complicado con Flow, mejor manejarlo en ViewModel o UseCase
+        // if (userId == 0) return flowOf(emptyList()) // O emitir un error
+        Log.d("ProjectRepository", "Obteniendo Flow de proyectos para userId: $userId")
+        // Simplemente devuelve el Flow del DAO. Room se encarga del hilo.
+        return projectDao.getAllProjectsByUserId(userId)
+            // Opcional: Añadir manejo de errores en el Flow si Room lanza alguna excepción rara
+            .catch { e ->
+                Log.e("ProjectRepository", "Error en Flow de getUserProjects", e)
+                emit(emptyList()) // Emitir lista vacía en caso de error, o relanzar
+            }
+            // Opcional: Asegurar que se observa en IO, aunque Room suele manejarlo
+            .flowOn(Dispatchers.IO)
     }
 
     suspend fun getProjectById(projectId: Int): Result<ProjectEntity> {
@@ -68,6 +81,16 @@ class ProjectRepository {
         return dbCall { dao ->
             dao.getProjectByIdAndUserId(projectId, userId)
                 ?: throw ProjectException.NotFound("Proyecto no encontrado con ID: $projectId")
+        }
+    }
+
+    suspend fun getProjectByName(projectName: String): Result<ProjectEntity> { // <-- Cambiar projectId por projectName
+        val userId = UserInfoProvider.userID
+        if (userId == 0) return Result.failure(ProjectException.NotAuthenticated())
+        // Llama al método DAO con los parámetros correctos
+        return dbCall { dao ->
+            dao.getProjectByNameAndUserId(projectName, userId)
+                ?: throw ProjectException.NotFound("Proyecto no encontrado con nombre: $projectName") // <-- Mensaje de error actualizado
         }
     }
 

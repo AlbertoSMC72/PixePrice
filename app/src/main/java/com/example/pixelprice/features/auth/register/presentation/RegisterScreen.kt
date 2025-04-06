@@ -92,7 +92,7 @@ fun RegisterScreen(
             value = uiState.name,
             onValueChange = registerViewModel::onChangeName,
             label = { Text("Nombre(s)") },
-            leadingIcon = { Icon(Icons.Default.Person, contentDescription = "Icono Usuario") },
+            leadingIcon = { Icon(Icons.Default.Person, contentDescription = "Icono Usuario", tint = LightGray) },
             shape = RoundedCornerShape(10.dp),
             modifier = Modifier
                 .fillMaxWidth()
@@ -101,6 +101,8 @@ fun RegisterScreen(
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
             isError = uiState.errorMessage?.contains("usuario", ignoreCase = true) == true,
             colors = TextFieldDefaults.outlinedTextFieldColors(
+                focusedTextColor = LightGray,
+                unfocusedTextColor = Beige,
                 focusedBorderColor = Beige, unfocusedBorderColor = LightGray, cursorColor = Beige,
                 focusedLabelColor = Beige, unfocusedLabelColor = LightGray,
                 errorBorderColor = Coral, errorLabelColor = Coral
@@ -112,7 +114,7 @@ fun RegisterScreen(
             value = uiState.lastName,
             onValueChange = registerViewModel::onChangeLastName,
             label = { Text("Apellido(s)") },
-            leadingIcon = { Icon(Icons.Default.Person, contentDescription = "Icono Usuario") },
+            leadingIcon = { Icon(Icons.Default.Person, contentDescription = "Icono Usuario", tint = LightGray) },
             shape = RoundedCornerShape(10.dp),
             modifier = Modifier
                 .fillMaxWidth()
@@ -121,6 +123,8 @@ fun RegisterScreen(
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
             isError = uiState.errorMessage?.contains("usuario", ignoreCase = true) == true,
             colors = TextFieldDefaults.outlinedTextFieldColors(
+                focusedTextColor = LightGray,
+                unfocusedTextColor = Beige,
                 focusedBorderColor = Beige, unfocusedBorderColor = LightGray, cursorColor = Beige,
                 focusedLabelColor = Beige, unfocusedLabelColor = LightGray,
                 errorBorderColor = Coral, errorLabelColor = Coral
@@ -132,13 +136,15 @@ fun RegisterScreen(
             value = uiState.email,
             onValueChange = registerViewModel::onChangeEmail,
             label = { Text("Correo Electrónico") },
-            leadingIcon = { Icon(Icons.Default.Email, contentDescription = "Icono Correo") },
+            leadingIcon = { Icon(Icons.Default.Email, contentDescription = "Icono Correo", tint = LightGray) },
             shape = RoundedCornerShape(10.dp),
             modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
             singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
             isError = uiState.errorMessage?.contains("correo", ignoreCase = true) == true,
             colors = TextFieldDefaults.outlinedTextFieldColors(
+                focusedTextColor = LightGray,
+                unfocusedTextColor = Beige,
                 focusedBorderColor = Beige, unfocusedBorderColor = LightGray, cursorColor = Beige,
                 focusedLabelColor = Beige, unfocusedLabelColor = LightGray,
                 errorBorderColor = Coral, errorLabelColor = Coral
@@ -150,7 +156,7 @@ fun RegisterScreen(
             value = uiState.password,
             onValueChange = registerViewModel::onChangePassword,
             label = { Text("Contraseña (mín. 6 caracteres)") }, // Añadir pista
-            leadingIcon = { Icon(Icons.Default.Lock, contentDescription = "Icono Contraseña") },
+            leadingIcon = { Icon(Icons.Default.Lock, contentDescription = "Icono Contraseña", tint = LightGray) },
             trailingIcon = {
                 IconButton(onClick = { isPasswordVisible = !isPasswordVisible }) {
                     Icon(
@@ -167,6 +173,8 @@ fun RegisterScreen(
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
             isError = uiState.errorMessage?.contains("contraseña", ignoreCase = true) == true,
             colors = TextFieldDefaults.outlinedTextFieldColors(
+                focusedTextColor = LightGray,
+                unfocusedTextColor = Beige,
                 focusedBorderColor = Beige, unfocusedBorderColor = LightGray, cursorColor = Beige,
                 focusedLabelColor = Beige, unfocusedLabelColor = LightGray,
                 errorBorderColor = Coral, errorLabelColor = Coral
@@ -219,7 +227,11 @@ fun RegisterScreen(
 
         Text(
             text = buildAnnotatedString {
-                append("¿Ya tienes una cuenta? ")
+                withStyle(
+                    style = SpanStyle(
+                        color = LightGray
+                    )
+                ) { append("¿Ya tienes una cuenta? ") }
                 pushStringAnnotation(tag = "LOGIN_LINK", annotation = "login")
                 withStyle(
                     style = SpanStyle(

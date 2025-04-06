@@ -1,5 +1,6 @@
 package com.example.pixelprice.features.projects.presentation.list
 
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -31,12 +32,6 @@ fun ProjectListScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
-    // Recargar proyectos cuando la pantalla se vuelve visible (opcional pero útil)
-    LaunchedEffect(Unit) {
-        viewModel.loadProjects()
-    }
-
-
     Scaffold(
         topBar = {
             TopAppBar(
@@ -48,7 +43,7 @@ fun ProjectListScreen(
                         Icon(Icons.Default.Person, contentDescription = "Perfil", tint = Beige)
                     }
                     // Botón para refrescar
-                    IconButton(onClick = { viewModel.loadProjects() }, enabled = !uiState.isLoading) {
+                    IconButton(onClick = { Log.d("ProjectListVM", "Iniciando flujo de proyectos...") }, enabled = !uiState.isLoading) {
                         Icon(
                             imageVector = Icons.Filled.Refresh,
                             contentDescription = "Refrescar Proyectos",
@@ -96,7 +91,7 @@ fun ProjectListScreen(
                             style = MaterialTheme.typography.bodyLarge
                         )
                         Spacer(modifier = Modifier.height(8.dp))
-                        Button(onClick = { viewModel.loadProjects() }) {
+                        Button(onClick = { Log.d("ProjectListVM", "Iniciando flujo de proyectos...") }) {
                             Text("Reintentar")
                         }
                     }

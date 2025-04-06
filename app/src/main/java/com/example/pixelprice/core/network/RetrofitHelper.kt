@@ -13,7 +13,7 @@ import androidx.annotation.VisibleForTesting
 object RetrofitHelper {
 
     //private const val BASE_URL = "https://pixelprice-api.onrender.com" // Asegúrate que sea la correcta
-    private const val BASE_URL = "http://192.168.0.12:8080"
+    private const val BASE_URL = "http://18.205.137.128:8080"
 
     @SuppressLint("StaticFieldLeak") // Justificado porque se inicializa en Application
     private lateinit var retrofitInstance: Retrofit

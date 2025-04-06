@@ -3,12 +3,15 @@ package com.example.pixelprice.features.quotations.data.repository
 import android.app.DownloadManager
 import android.content.ContentValues
 import android.content.Context
+import android.content.SharedPreferences
 import android.net.Uri
 import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
+import android.system.Os.remove
 import android.util.Log
 import android.widget.Toast
+import androidx.documentfile.provider.DocumentFile
 import com.example.pixelprice.core.data.UserInfoProvider
 import com.example.pixelprice.features.quotations.data.datasource.QuotationService
 import com.example.pixelprice.core.network.RetrofitHelper
@@ -31,6 +34,14 @@ class QuotationRepository(
 
     private val quotationService: QuotationService by lazy {
         RetrofitHelper.createService(QuotationService::class.java)
+    }
+
+    companion object {
+        private const val PREFS_NAME_PROFILE = "pixelprice_profile_prefs"
+        private const val KEY_DOWNLOAD_DIR_URI = "download_directory_uri"
+    }
+    private val profilePrefs: SharedPreferences by lazy {
+        applicationContext.getSharedPreferences(PREFS_NAME_PROFILE, Context.MODE_PRIVATE)
     }
 
     // --- Solicitar Creación de Cotización ---
@@ -128,32 +139,32 @@ class QuotationRepository(
     }
 
     suspend fun downloadQuotationDocx(quotationName: String): Result<Unit> {
-        // La comprobación de permiso WRITE_EXTERNAL_STORAGE se hace en ViewModel
         return try {
             Log.d("QuotationRepository", "Iniciando descarga DOCX para Nombre: $quotationName")
-            // *** LLAMAR AL SERVICIO RETROFIT ***
             val response = quotationService.downloadQuotationDocx(quotationName)
 
             if (response.isSuccessful && response.body() != null) {
-                // *** LLAMAR AL HELPER DE ESCRITURA MANUAL ***
-                saveResponseBodyToFile(response.body()!!, quotationName) // Pasar nombre
+                val directoryUriString = profilePrefs.getString(KEY_DOWNLOAD_DIR_URI, null)
+                val targetDirectoryUri = directoryUriString?.let {
+                    try { Uri.parse(it) } catch (e: Exception) { null }
+                }
+                Log.d("QuotationRepository", "Directorio de destino leído de prefs: $targetDirectoryUri")
+
+                // Llamar a saveResponseBodyToFile pasando el URI de destino
+                saveResponseBodyToFile(response.body()!!, quotationName, targetDirectoryUri)
                 Result.success(Unit)
             } else {
-                // Manejar error de API (404, 500, etc.)
                 handleApiError(response.code(), response.errorBody()?.string(), "Descargar DOCX")
             }
         } catch (e: IOException) {
-            // Error de Red/IO durante la petición o escritura
             Log.e("QuotationRepository", "Error de red/IO descargando DOCX: $quotationName", e)
             Result.failure(QuotationException.DownloadFailed("Error de red/IO durante la descarga.", e))
         } catch (e: SecurityException) {
-            // Error de permiso al intentar escribir (si falla la comprobación previa)
             Log.e("QuotationRepository", "Error de permisos descargando DOCX: $quotationName", e)
             Result.failure(QuotationException.DownloadFailed("Permiso denegado para guardar archivo.", e))
         } catch (e: Exception) {
-            // Otros errores inesperados
             Log.e("QuotationRepository", "Error inesperado descargando DOCX: $quotationName", e)
-            Result.failure(QuotationException.DownloadFailed("Error inesperado durante la descarga.", e))
+            Result.failure(QuotationException.DownloadFailed("Error inesperado durante la descarga: ${e.message}", e))
         }
     }
 
@@ -179,60 +190,123 @@ class QuotationRepository(
     }
 
     @Suppress("BlockingMethodInNonBlockingContext")
-    private suspend fun saveResponseBodyToFile(body: ResponseBody, name: String) {
+    private suspend fun saveResponseBodyToFile(body: ResponseBody, name: String, targetDirectoryUri: Uri?) {
         withContext(Dispatchers.IO) {
             val cleanName = name.replace(Regex("[^a-zA-Z0-9_.-]"), "_")
-            // Usar timestamp para nombre único si no tenemos ID explícito aquí
             val fileName = "Cotizacion_${cleanName}_${System.currentTimeMillis()}.docx"
             val mimeType = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
             var outputStream: OutputStream? = null
             var inputStream: InputStream? = null
+            var savedToSelectedFolder = false // Flag para saber dónde se guardó
+            var targetDirName: String? = null // Nombre de la carpeta seleccionada
 
             try {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                    // --- API 29+ (Android 10+) ---
-                    val resolver = applicationContext.contentResolver
-                    val contentValues = ContentValues().apply {
-                        put(MediaStore.MediaColumns.DISPLAY_NAME, fileName)
-                        put(MediaStore.MediaColumns.MIME_TYPE, mimeType)
-                        put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
+                // Intentar usar la carpeta seleccionada por SAF si existe y es válida
+                if (targetDirectoryUri != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                    Log.d("SaveToFile", "Intentando usar directorio SAF: $targetDirectoryUri")
+                    val directory = DocumentFile.fromTreeUri(applicationContext, targetDirectoryUri)
+
+                    if (directory != null) {
+                        targetDirName = directory.name // Obtener nombre para el Toast
+                        Log.d("SaveToFile", "DocumentFile obtenido. Nombre: $targetDirName, Es Directorio: ${directory.isDirectory}, Puede Escribir: ${directory.canWrite()}")
+
+                        if (directory.isDirectory && directory.canWrite()) {
+                            val newFile = directory.createFile(mimeType, fileName)
+                            if (newFile != null) {
+                                Log.d("SaveToFile", "Archivo creado en SAF: ${newFile.uri}")
+                                outputStream = applicationContext.contentResolver.openOutputStream(newFile.uri)
+                                if (outputStream != null) {
+                                    Log.i("SaveToFile", "Guardando en directorio SAF seleccionado: ${newFile.uri}")
+                                    savedToSelectedFolder = true // Marcamos éxito con SAF
+                                } else {
+                                    Log.e("SaveToFile", "Error: openOutputStream devolvió null para ${newFile.uri}")
+                                }
+                            } else {
+                                Log.e("SaveToFile", "Error: directory.createFile devolvió null en $targetDirectoryUri")
+                            }
+                        } else {
+                            Log.w("SaveToFile", "Directorio SAF no es válido o no se puede escribir. Nombre: $targetDirName")
+                            // Podríamos limpiar la preferencia aquí si falla canWrite persistentemente
+                            // profilePrefs.edit { remove(KEY_DOWNLOAD_DIR_URI) }
+                        }
+                    } else {
+                        Log.e("SaveToFile", "Error: DocumentFile.fromTreeUri devolvió null para $targetDirectoryUri")
+                        // Limpiar preferencia si el URI es inválido
+                        profilePrefs.edit().remove(KEY_DOWNLOAD_DIR_URI).apply()
                     }
-                    val uri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, contentValues)
-                        ?: throw IOException("Error al crear entrada en MediaStore para $fileName")
-                    outputStream = resolver.openOutputStream(uri)
-                        ?: throw IOException("Error al abrir OutputStream para MediaStore Uri: $uri")
-
                 } else {
-                    // --- API < 29 (Android < 10) ---
-                    val downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
-                    if (!downloadsDir.exists()) { downloadsDir.mkdirs() }
-                    val file = File(downloadsDir, fileName)
-                    outputStream = FileOutputStream(file)
+                    Log.d("SaveToFile", "No hay directorio SAF seleccionado o versión Android < Lollipop.")
                 }
 
-                // Escribir los bytes
+                // Si no se pudo guardar con SAF (outputStream sigue null), usar fallback
+                if (outputStream == null) {
+                    Log.w("SaveToFile", "Fallback: Guardando en Descargas.")
+                    savedToSelectedFolder = false // Asegurar que el flag es false
+                    targetDirName = null
+                    outputStream = saveToDownloadsFallback(fileName, mimeType)
+                }
+
+                // Si AÚN no se pudo obtener un OutputStream (ni con SAF ni con fallback)
+                if (outputStream == null) {
+                    throw IOException("No se pudo obtener un flujo de salida válido para guardar el archivo.")
+                }
+
+                // --- Escritura del archivo ---
                 inputStream = body.byteStream()
+                Log.d("SaveToFile", "Iniciando copia de bytes...")
                 val copied = inputStream.copyTo(outputStream)
-                Log.i("QuotationRepository", "Archivo DOCX guardado en Descargas: $fileName, Bytes: $copied")
+                Log.i("SaveToFile", "Archivo guardado. Bytes copiados: $copied. En carpeta seleccionada: $savedToSelectedFolder")
 
-                // Mostrar Toast de éxito
-                withContext(Dispatchers.Main) {
-                    Toast.makeText(applicationContext, "Descarga completada: $fileName", Toast.LENGTH_LONG).show()
+                // --- Mensaje Toast Mejorado ---
+                val finalMessage = if (savedToSelectedFolder && targetDirName != null) {
+                    "Guardado en '$targetDirName': $fileName"
+                } else {
+                    "Guardado en Descargas: $fileName" // Mensaje fallback
                 }
 
-            } catch (e: Exception) { // Capturar cualquier excepción durante la escritura
-                Log.e("QuotationRepository", "Error al guardar archivo DOCX descargado ($fileName)", e)
                 withContext(Dispatchers.Main) {
-                    Toast.makeText(applicationContext, "Error al guardar descarga", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(applicationContext, finalMessage, Toast.LENGTH_LONG).show()
+                }
+
+            } catch (e: Exception) {
+                Log.e("SaveToFile", "Error durante el guardado del archivo DOCX ($fileName)", e)
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(applicationContext, "Error al guardar descarga: ${e.message}", Toast.LENGTH_SHORT).show()
                 }
                 // Relanzar para que el UseCase/ViewModel lo capture como fallo
                 throw IOException("Error al guardar el archivo: ${e.message}", e)
             } finally {
-                try { inputStream?.close() } catch (e: IOException) { /* ignore */ }
-                try { outputStream?.close() } catch (e: IOException) { /* ignore */ }
+                try { inputStream?.close() } catch (e: IOException) { Log.e("SaveToFile", "Error cerrando InputStream", e) }
+                try { outputStream?.close() } catch (e: IOException) { Log.e("SaveToFile", "Error cerrando OutputStream", e) }
             }
         }
     }
+
+    @Throws(IOException::class)
+    private fun saveToDownloadsFallback(fileName: String, mimeType: String): OutputStream? {
+        // ... (código existente sin cambios) ...
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            // API 29+ (Android 10+) - MediaStore
+            val resolver = applicationContext.contentResolver
+            val contentValues = ContentValues().apply {
+                put(MediaStore.MediaColumns.DISPLAY_NAME, fileName)
+                put(MediaStore.MediaColumns.MIME_TYPE, mimeType)
+                put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
+            }
+            val uri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, contentValues)
+                ?: throw IOException("Error al crear entrada en MediaStore (fallback) para $fileName")
+            return resolver.openOutputStream(uri)
+        } else {
+            // API < 29 (Android < 10) - Acceso directo
+            val downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+            if (!downloadsDir.exists() && !downloadsDir.mkdirs()) {
+                throw IOException("No se pudo crear el directorio de Descargas (fallback).")
+            }
+            val file = File(downloadsDir, fileName)
+            return FileOutputStream(file)
+        }
+    }
+
 }
 
 

@@ -18,6 +18,7 @@ import com.example.pixelprice.ui.theme.*
 import kotlinx.coroutines.flow.collectLatest
 import android.Manifest
 import android.net.Uri
+import android.util.Log
 import android.os.Build // Necesario para comprobación de versión
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -109,7 +110,6 @@ fun ProjectDetailScreen(
         viewModel.onLegacyWritePermissionResult(granted) // Notificar al VM
     }
 
-    // --- Colector de Eventos del ViewModel ---
     LaunchedEffect(Unit) {
         viewModel.eventFlow.collectLatest { event ->
             when (event) {
@@ -118,6 +118,17 @@ fun ProjectDetailScreen(
                 is ProjectDetailEvent.RequestCameraPermission -> cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
                 is ProjectDetailEvent.RequestGalleryPermission -> galleryPermissionLauncher.launch(event.permission)
                 is ProjectDetailEvent.RequestLegacyWritePermission -> legacyWritePermissionLauncher.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+
+                // *** NUEVO: Manejar el evento para lanzar la galería ***
+                is ProjectDetailEvent.LaunchGallery -> {
+                    try {
+                        Log.d("ProjectDetailScreen", "Evento LaunchGallery recibido, lanzando galería...")
+                        galleryLauncher.launch("image/*")
+                    } catch (e: Exception) {
+                        Log.e("ProjectDetailScreen", "Error al lanzar galería desde evento", e)
+                        Toast.makeText(context, "No se pudo abrir la galería.", Toast.LENGTH_SHORT).show()
+                    }
+                }
             }
         }
     }
@@ -167,7 +178,31 @@ fun ProjectDetailScreen(
                             .verticalScroll(rememberScrollState())
                     ) {
                         // --- Detalles del Proyecto ---
-                        DetailItem(label = "Descripción", value = project.description)
+                        Text(
+                            "Detalles del Proyecto:", // Título de la sección
+                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold), // Estilo para el título
+                            color = LightGray, // Color del título
+                            modifier = Modifier.padding(bottom = 8.dp) // Espacio debajo del título
+                        )
+                        // Contenedor opcional para agrupar visualmente los detalles
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(Beige.copy(alpha = 0.05f), RoundedCornerShape(6.dp)) // Fondo muy sutil y bordes redondeados
+                                .padding(horizontal = 12.dp, vertical = 8.dp) // Padding interno
+                        ) {
+                            // Iterar sobre la descripción parseada del UiState
+                            uiState.parsedDescription.forEachIndexed { index, (label, value) ->
+                                // Usamos el Composable DetailItem existente para mantener la consistencia
+                                DetailItem(label = label, value = value)
+                                // No añadir Divider después del último ítem
+                                // if (index < uiState.parsedDescription.lastIndex) {
+                                // Divider(color = LightGray.copy(alpha = 0.15f), thickness = 0.5.dp) // Divisor más sutil
+                                // }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(16.dp))
                         DetailItem(label = "Capital", value = "$ ${String.format("%.2f", project.capital)}")
                         DetailItem(label = "Tipo", value = if (project.isSelfMade) "Autogestionado" else "Con equipo")
                         DetailItem(label = "Creado", value = formatTimestamp(project.createdAt))
@@ -239,7 +274,7 @@ fun ProjectDetailScreen(
                             modifier = Modifier.fillMaxWidth().height(50.dp),
                             enabled = canRequestQuote,
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = if(canRequestQuote) Coral else GrayBlue,
+                                containerColor = if(canRequestQuote) LightGray else GrayBlue,
                                 contentColor = Beige,
                                 disabledContainerColor = GrayBlue.copy(alpha = 0.7f), // Color deshabilitado
                                 disabledContentColor = LightGray.copy(alpha = 0.7f) // Color texto deshabilitado

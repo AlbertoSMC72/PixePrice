@@ -1,6 +1,7 @@
 package com.example.pixelprice.features.projects.data.local
 
 import androidx.room.*
+import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface ProjectDao {
@@ -9,10 +10,13 @@ interface ProjectDao {
     suspend fun insertProject(project: ProjectEntity): Long // Devuelve el ID insertado
 
     @Query("SELECT * FROM projects WHERE user_id = :userId ORDER BY created_at DESC")
-    suspend fun getAllProjectsByUserId(userId: Int): List<ProjectEntity>
+    fun getAllProjectsByUserId(userId: Int): Flow<List<ProjectEntity>>
 
     @Query("SELECT * FROM projects WHERE id = :projectId AND user_id = :userId LIMIT 1")
     suspend fun getProjectByIdAndUserId(projectId: Int, userId: Int): ProjectEntity?
+
+    @Query("SELECT * FROM projects WHERE name = :projectName AND user_id = :userId LIMIT 1")
+    suspend fun getProjectByNameAndUserId(projectName: String, userId: Int): ProjectEntity?
 
     @Query("SELECT EXISTS(SELECT 1 FROM projects WHERE name = :name LIMIT 1)")
     suspend fun isProjectNameTaken(name: String): Boolean

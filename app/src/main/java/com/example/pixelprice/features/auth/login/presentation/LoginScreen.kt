@@ -107,7 +107,7 @@ fun LoginScreen(
             value = uiState.email,
             onValueChange = { loginViewModel.onEmailChange(it) },
             label = { Text("Correo Electrónico") },
-            leadingIcon = { Icon(Icons.Default.Mail, contentDescription = "Icono Correo") },
+            leadingIcon = { Icon(Icons.Default.Mail, contentDescription = "Icono Correo", tint = LightGray) },
             shape = RoundedCornerShape(10.dp),
             modifier = Modifier
                 .fillMaxWidth()
@@ -116,6 +116,8 @@ fun LoginScreen(
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
             isError = uiState.errorMessage?.contains("correo", ignoreCase = true) == true, // Marcar error si aplica
             colors = TextFieldDefaults.outlinedTextFieldColors( // Colores personalizados
+                focusedTextColor = LightGray,
+                unfocusedTextColor = Beige,
                 focusedBorderColor = Beige,
                 unfocusedBorderColor = LightGray,
                 cursorColor = Beige,
@@ -133,7 +135,7 @@ fun LoginScreen(
             value = uiState.password,
             onValueChange = { loginViewModel.onPasswordChange(it) },
             label = { Text("Contraseña") },
-            leadingIcon = { Icon(Icons.Default.Lock, contentDescription = "Icono Contraseña") },
+            leadingIcon = { Icon(Icons.Default.Lock, contentDescription = "Icono Contraseña", tint = LightGray) },
             trailingIcon = {
                 IconButton(onClick = { isPasswordVisible = !isPasswordVisible }) {
                     Icon(
@@ -152,6 +154,8 @@ fun LoginScreen(
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
             isError = uiState.errorMessage?.contains("contraseña", ignoreCase = true) == true,
             colors = TextFieldDefaults.outlinedTextFieldColors( // Mismos colores
+                focusedTextColor = LightGray,
+                unfocusedTextColor = Beige,
                 focusedBorderColor = Beige,
                 unfocusedBorderColor = LightGray,
                 cursorColor = Beige,
@@ -217,7 +221,11 @@ fun LoginScreen(
         // Link para ir a Registro
         Text(
             text = buildAnnotatedString {
-                append("¿No tienes una cuenta? ")
+                withStyle(
+                    style = SpanStyle(
+                        color = LightGray
+                    )
+                ) {append("¿No tienes una cuenta? ")}
                 pushStringAnnotation(tag = "REGISTER_LINK", annotation = "register") // Tag para accesibilidad/pruebas
                 withStyle(
                     style = SpanStyle(
