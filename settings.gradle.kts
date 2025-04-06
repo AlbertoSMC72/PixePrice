@@ -19,5 +19,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "watpato"
+rootProject.name = "pixelprice"
 include(":app")

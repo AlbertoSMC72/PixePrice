@@ -8,11 +8,11 @@ plugins {
 }
 
 android {
-    namespace = "com.example.watpato"
+    namespace = "com.example.pixelprice"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.example.watpato"
+        applicationId = "com.example.pixelprice"
         minSdk = 24
         targetSdk = 35
         versionCode = 1
@@ -39,6 +39,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 
@@ -48,6 +49,10 @@ dependencies {
     ksp("androidx.room:room-compiler:$room_version")
     annotationProcessor("androidx.room:room-compiler:$room_version")
     implementation("androidx.room:room-ktx:$room_version")
+
+    implementation(libs.coil.compose)
+
+    implementation("androidx.compose.material:material-icons-extended-android:1.7.8")
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)     // ViewModel
