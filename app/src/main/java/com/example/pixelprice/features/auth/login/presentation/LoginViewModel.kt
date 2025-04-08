@@ -63,7 +63,7 @@ class LoginViewModel() : ViewModel() {
         _uiState.update { it.copy(isLoading = true, errorMessage = null) }
 
         viewModelScope.launch {
-            val loginResult = loginUseCase(email, password) // Llamada al UseCase
+            val loginResult = loginUseCase(email, password)
             loginResult.onSuccess {
                 Log.i("LoginViewModel", "Login exitoso.")
                 registerFcmTokenInBackground()

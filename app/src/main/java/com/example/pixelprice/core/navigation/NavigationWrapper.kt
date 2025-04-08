@@ -53,31 +53,26 @@ fun NavigationWrapper(navController: NavHostController) {
 
     val startDestination = remember {
         if (TokenManager.isSessionActive()) {
-            // Si hay sesión activa, cargar info del usuario en el provider en memoria
-            // (Necesario si otros componentes leen directamente de UserInfoProvider)
             val userId = TokenManager.getUserId()
             val username = TokenManager.getUsername()
-            if (userId != 0) { // Asegurarse que realmente hay un ID guardado
+            if (userId != 0) {
                 UserInfoProvider.setUserInfo(userId, username)
                 Log.d("NavigationWrapper", "Sesión activa encontrada para User ID: $userId. Iniciando en ProjectList.")
-                Routes.PROJECT_LIST // Ir a la lista de proyectos
+                Routes.PROJECT_LIST
             } else {
-                // Algo raro pasó (token activo pero sin ID?), mejor ir a Login
                 Log.w("NavigationWrapper", "Token activo pero User ID no encontrado en SharedPreferences. Iniciando en Login.")
-                TokenManager.clearToken() // Limpiar estado inconsistente
+                TokenManager.clearToken()
                 Routes.LOGIN
             }
         } else {
             Log.d("NavigationWrapper", "No hay sesión activa. Iniciando en Login.")
-            Routes.LOGIN // Ir a la pantalla de login
+            Routes.LOGIN
         }
     }
 
     NavHost(navController = navController, startDestination = startDestination) {
 
-        // --- Auth Screens ---
         composable(route = Routes.LOGIN) {
-            // *** CORREGIDO: Usar BasicViewModelFactory ***
             val viewModel: LoginViewModel = viewModel(factory = BasicViewModelFactory)
             LoginScreen(loginViewModel = viewModel) { destination ->
                 navController.navigate(destination) {
@@ -88,7 +83,6 @@ fun NavigationWrapper(navController: NavHostController) {
         }
 
         composable(route = Routes.REGISTER) {
-            // *** CORREGIDO: Usar BasicViewModelFactory ***
             val viewModel: RegisterViewModel = viewModel(factory = BasicViewModelFactory)
             RegisterScreen(registerViewModel = viewModel) { destination ->
                 navController.navigate(destination) {
@@ -98,7 +92,6 @@ fun NavigationWrapper(navController: NavHostController) {
             }
         }
 
-        // --- Project Screens (Local) ---
         composable(route = Routes.PROJECT_LIST) {
             val viewModel: ProjectListViewModel = viewModel(factory = projectListVMFactory)
             ProjectListScreen(
@@ -122,7 +115,7 @@ fun NavigationWrapper(navController: NavHostController) {
             arguments = listOf(navArgument(Routes.ARG_PROJECT_ID) { type = NavType.IntType })
         ) { backStackEntry ->
             val projectId = backStackEntry.arguments?.getInt(Routes.ARG_PROJECT_ID) ?: -1
-            if (projectId == -1) { /* ... error handling ... */ return@composable }
+            if (projectId == -1) {  return@composable }
 
             val viewModel: ProjectDetailViewModel = viewModel(factory = projectDetailVMFactory)
 
@@ -134,13 +127,12 @@ fun NavigationWrapper(navController: NavHostController) {
             )
         }
 
-        // --- Processing Screen ---
         composable(
             route = Routes.PROCESSING_ROUTE,
             arguments = listOf(navArgument(Routes.ARG_PROJECT_ID) { type = NavType.IntType })
         ) { backStackEntry ->
             val projectId = backStackEntry.arguments?.getInt(Routes.ARG_PROJECT_ID) ?: -1
-            if (projectId == -1) { /* ... error handling ... */ return@composable }
+            if (projectId == -1) {  return@composable }
             ProcessingScreen(
                 projectId = projectId,
                 onNavigateBack = { navController.popBackStack() }
@@ -148,15 +140,14 @@ fun NavigationWrapper(navController: NavHostController) {
         }
 
         composable(route = Routes.PROFILE) {
-            val userId = TokenManager.getUserId() // Más seguro obtenerlo directamente
+            val userId = TokenManager.getUserId()
             if (userId == 0) {
-                // Redirigir a Login si no hay ID
                 LaunchedEffect(Unit) {
                     navController.navigate(Routes.LOGIN) {
                         popUpTo(navController.graph.id) { inclusive = true }
                     }
                 }
-                Spacer(Modifier.fillMaxSize()) // Mostrar algo mientras redirige
+                Spacer(Modifier.fillMaxSize())
                 return@composable
             }
 

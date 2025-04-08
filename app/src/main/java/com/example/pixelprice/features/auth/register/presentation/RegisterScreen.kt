@@ -72,7 +72,6 @@ fun RegisterScreen(
             .fillMaxSize()
             .background(Teal)
             .padding(16.dp)
-            // scroll vertical por si el teclado empuja los elementos
             .verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
@@ -155,7 +154,7 @@ fun RegisterScreen(
         OutlinedTextField(
             value = uiState.password,
             onValueChange = registerViewModel::onChangePassword,
-            label = { Text("Contraseña (mín. 6 caracteres)") }, // Añadir pista
+            label = { Text("Contraseña (mín. 6 caracteres)") },
             leadingIcon = { Icon(Icons.Default.Lock, contentDescription = "Icono Contraseña", tint = LightGray) },
             trailingIcon = {
                 IconButton(onClick = { isPasswordVisible = !isPasswordVisible }) {
@@ -185,7 +184,7 @@ fun RegisterScreen(
         if (uiState.errorMessage != null) {
             Text(
                 text = uiState.errorMessage!!,
-                color = Coral, // Color de error
+                color = Coral,
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                 textAlign = TextAlign.Center,
                 style = MaterialTheme.typography.bodySmall

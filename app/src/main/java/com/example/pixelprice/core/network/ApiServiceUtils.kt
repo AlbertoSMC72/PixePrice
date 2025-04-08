@@ -22,22 +22,21 @@ fun Boolean.toTextRequestBody(): RequestBody =
 
 fun Uri?.toImageMultipartBodyPart(
     context: Context,
-    partName: String = "mockupImage" // Nombre del campo que espera la API
+    partName: String = "mockupImage"
 ): MultipartBody.Part? {
     if (this == null) return null
 
     return try {
         val contentResolver = context.contentResolver
-        val mimeType = contentResolver.getType(this) ?: "image/*" // Fallback a tipo genérico
-        val extension = mimeType.substringAfterLast('/', "jpg") // Obtener extensión o fallback
+        val mimeType = contentResolver.getType(this) ?: "image/*"
+        val extension = mimeType.substringAfterLast('/', "jpg")
         val fileName = "${partName}_${System.currentTimeMillis()}.$extension"
 
         Log.d("ApiServiceUtils", "Preparando imagen: Uri=$this, Mime=$mimeType, Name=$fileName")
 
-        // Leer bytes desde el InputStream del Uri
         val inputStream = contentResolver.openInputStream(this)
         val imageBytes = inputStream?.readBytes()
-        inputStream?.close() // ¡Importante cerrar el stream!
+        inputStream?.close()
 
         if (imageBytes != null) {
             val imageRequestBody = imageBytes.toRequestBody(mimeType.toMediaTypeOrNull())
@@ -48,6 +47,6 @@ fun Uri?.toImageMultipartBodyPart(
         }
     } catch (e: Exception) {
         Log.e("ApiServiceUtils", "Error convirtiendo Uri a MultipartBody.Part para $this", e)
-        null // Devolver null si hay algún error
+        null
     }
 }

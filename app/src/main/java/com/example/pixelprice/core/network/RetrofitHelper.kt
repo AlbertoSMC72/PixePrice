@@ -11,26 +11,21 @@ import java.util.concurrent.TimeUnit
 import androidx.annotation.VisibleForTesting
 
 object RetrofitHelper {
-
-    //private const val BASE_URL = "https://pixelprice-api.onrender.com" // Asegúrate que sea la correcta
     private const val BASE_URL = "http://18.205.137.128:8080"
 
-    @SuppressLint("StaticFieldLeak") // Justificado porque se inicializa en Application
+    @SuppressLint("StaticFieldLeak")
     private lateinit var retrofitInstance: Retrofit
     private var isInitialized = false
     private val lock = Any()
 
-    // *** NUEVO: Función de inicialización ***
-    fun initialize(context: Context) { // Context sólo necesario aquí
+    fun initialize(context: Context) {
         if (!isInitialized) {
             synchronized(lock) {
                 if (!isInitialized) {
                     val loggingInterceptor = HttpLoggingInterceptor().apply {
-                        // Usar Level.BASIC o Level.NONE en producción
                         level = HttpLoggingInterceptor.Level.BODY
                     }
 
-                    // *** MODIFICADO: AuthInterceptor ya no necesita context ***
                     val authInterceptor = AuthInterceptor()
 
                     val okHttpClient = OkHttpClient.Builder()
@@ -54,24 +49,20 @@ object RetrofitHelper {
         }
     }
 
-    // *** MODIFICADO: createService ya no necesita context ***
     fun <T> createService(serviceClass: Class<T>): T {
         check(isInitialized) { "RetrofitHelper no ha sido inicializado. Llama a initialize() en Application.onCreate." }
         return retrofitInstance.create(serviceClass)
     }
 
-    // Opcional: obtener instancia (raramente necesario)
     fun getRetrofitInstance(): Retrofit {
         check(isInitialized) { "RetrofitHelper no ha sido inicializado." }
         return retrofitInstance
     }
 
-    // Opcional para pruebas
     @VisibleForTesting
     internal fun resetForTest() {
         synchronized(lock) {
             isInitialized = false
-            // No podemos resetear lateinit a null
         }
     }
 }

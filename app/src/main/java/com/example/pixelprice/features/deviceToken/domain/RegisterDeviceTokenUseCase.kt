@@ -1,11 +1,8 @@
 package com.example.pixelprice.features.deviceToken.domain
 
-// import android.content.Context // Ya no es necesario
 import com.example.pixelprice.features.deviceToken.data.DeviceTokenRepository
 
-// *** CORREGIDO: No necesita Context ***
 class RegisterDeviceTokenUseCase {
-    // *** CORREGIDO: Instanciar sin contexto ***
     private val repository = DeviceTokenRepository()
 
     suspend operator fun invoke(fcmToken: String): Result<Unit> {

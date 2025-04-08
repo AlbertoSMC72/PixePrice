@@ -4,14 +4,13 @@ import android.content.Context
 import android.net.Uri
 import android.util.Log
 import androidx.core.content.FileProvider
-import com.example.pixelprice.BuildConfig // Ahora debería resolverse tras habilitar buildConfig
+import com.example.pixelprice.BuildConfig
 import java.io.File
 import java.io.IOException
 
 object ComposeFileProvider {
 
     private const val IMAGE_SUBDIR = "images"
-    // Accede a BuildConfig de forma segura
     private val AUTHORITY: String? by lazy {
         try {
             "${BuildConfig.APPLICATION_ID}.provider"
@@ -23,7 +22,7 @@ object ComposeFileProvider {
     }
 
     fun getImageUri(context: Context): Uri? {
-        val authority = AUTHORITY ?: return null // Salir si no se pudo obtener la autoridad
+        val authority = AUTHORITY ?: return null
 
         return try {
             val imagePath = File(context.cacheDir, IMAGE_SUBDIR)
@@ -44,7 +43,7 @@ object ComposeFileProvider {
 
             FileProvider.getUriForFile(
                 context,
-                authority, // Usar la autoridad obtenida
+                authority,
                 tempFile
             )
         } catch (e: IOException) {

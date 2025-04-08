@@ -7,7 +7,6 @@ import com.example.pixelprice.features.profile.data.model.GetProfileResponse
 import com.example.pixelprice.features.profile.data.model.UpdateProfileRequest
 import java.io.IOException
 
-// Excepciones específicas para Profile (sin cambios)
 sealed class ProfileException(message: String, cause: Throwable? = null) : Exception(message, cause) {
     class NetworkError(cause: Throwable) : ProfileException("Error de red. Verifica tu conexión.", cause)
     class NotFound(message: String = "Usuario no encontrado.") : ProfileException(message)
@@ -22,14 +21,12 @@ class ProfileRepository {
         RetrofitHelper.createService(ProfileService::class.java)
     }
 
-    // Obtener perfil (actualizado para GetProfileResponse)
     suspend fun getProfile(id: Int): Result<GetProfileResponse> {
         if (id <= 0) return Result.failure(IllegalArgumentException("ID de usuario inválido."))
         return try {
             val response = profileService.getProfile(id)
             if (response.isSuccessful) {
                 val profileResponse = response.body()
-                // *** Validar la estructura completa ***
                 if (profileResponse?.data?.user != null) {
                     Log.d("ProfileRepository", "Perfil recibido de API: ${profileResponse.data.user}")
                     Result.success(profileResponse)
@@ -52,14 +49,12 @@ class ProfileRepository {
         }
     }
 
-    // Actualizar perfil (actualizado para GetProfileResponse)
     suspend fun updateProfile(id: Int, request: UpdateProfileRequest): Result<GetProfileResponse> {
         if (id <= 0) return Result.failure(IllegalArgumentException("ID de usuario inválido."))
         return try {
             val response = profileService.updateProfile(id, request)
             if (response.isSuccessful) {
                 val updatedProfileResponse = response.body()
-                // *** Validar la estructura completa ***
                 if (updatedProfileResponse?.data?.user != null) {
                     Log.d("ProfileRepository", "Perfil actualizado recibido de API: ${updatedProfileResponse.data.user}")
                     Result.success(updatedProfileResponse)

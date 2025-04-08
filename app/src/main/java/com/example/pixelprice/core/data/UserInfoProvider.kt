@@ -14,14 +14,12 @@ object UserInfoProvider {
         get() = _username
         set(value) { _username = value }
 
-    // *** NUEVO: Método para limpiar la info del usuario ***
     fun clearUserInfo() {
         Log.d("UserInfoProvider", "Limpiando información del usuario.")
         _userID = 0
         _username = null
     }
 
-    // Opcional: Método para establecer toda la info a la vez
     fun setUserInfo(id: Int, name: String?) {
         _userID = id
         _username = name

@@ -6,20 +6,18 @@ import android.content.Intent
 import android.content.SharedPreferences
 import android.net.Uri
 import android.util.Log
-import androidx.lifecycle.AndroidViewModel // *** CAMBIO: Usar AndroidViewModel ***
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.pixelprice.core.data.TokenManager
-import com.example.pixelprice.core.data.UserInfoProvider // Se sigue usando para limpiar al logout
-// *** CAMBIO: Importar GetProfileResponse ***
+import com.example.pixelprice.core.data.UserInfoProvider
 import com.example.pixelprice.features.profile.data.model.GetProfileResponse
 import com.example.pixelprice.features.profile.domain.usecase.GetProfileUseCase
 import com.example.pixelprice.features.profile.domain.usecase.UpdateProfileUseCase
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
-// Estado de la UI (actualizado con downloadDirectoryUri)
 data class ProfileUiState(
-    val profileData: GetProfileResponse? = null, // Almacena la respuesta completa
+    val profileData: GetProfileResponse? = null,
     val email: String = "",
     val name: String = "",
     val lastName: String = "",
@@ -29,14 +27,12 @@ data class ProfileUiState(
     val downloadDirectoryUri: String? = null
 )
 
-// Eventos (actualizado con OpenDirectoryPicker)
 sealed class ProfileEvent {
     data class ShowToast(val message: String) : ProfileEvent()
     object NavigateToLogin : ProfileEvent()
     object OpenDirectoryPicker : ProfileEvent()
 }
 
-// *** CAMBIO: Heredar de AndroidViewModel y recibir Application ***
 class ProfileViewModel(application: Application) : AndroidViewModel(application) {
     private val getProfileUseCase = GetProfileUseCase()
     private val updateProfileUseCase = UpdateProfileUseCase()
@@ -47,7 +43,6 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
     private val _eventFlow = MutableSharedFlow<ProfileEvent>()
     val eventFlow = _eventFlow.asSharedFlow()
 
-    // Claves y SharedPreferences para la carpeta de descarga
     companion object {
         private const val PREFS_NAME_PROFILE = "pixelprice_profile_prefs"
         private const val KEY_DOWNLOAD_DIR_URI = "download_directory_uri"
@@ -59,7 +54,6 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
 
     init {
         loadDownloadDirectoryPreference()
-        // La carga del perfil se inicia desde la UI con el userId
     }
 
     private fun loadDownloadDirectoryPreference() {
@@ -67,7 +61,6 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
         if (savedUriString != null) {
             try {
                 val uri = Uri.parse(savedUriString)
-                // Intenta tomar permisos persistentes
                 getApplication<Application>().contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
                 _uiState.update { it.copy(downloadDirectoryUri = savedUriString) }
                 Log.d("ProfileViewModel", "Preferencia de directorio de descarga cargada: $savedUriString")
@@ -81,17 +74,15 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    // Carga de perfil (actualizado para extraer datos de la estructura correcta)
     fun loadProfile(userId: Int) {
         _uiState.update { it.copy(isLoading = true, errorMessage = null) }
         viewModelScope.launch {
             val result = getProfileUseCase(userId)
-            result.onSuccess { profileResponse -> // Ahora es GetProfileResponse
+            result.onSuccess { profileResponse ->
                 _uiState.update {
                     it.copy(
                         isLoading = false,
-                        profileData = profileResponse, // Guardar la respuesta completa
-                        // *** Extraer de profileResponse.data.user ***
+                        profileData = profileResponse,
                         email = profileResponse.data?.user?.email ?: "",
                         name = profileResponse.data?.user?.name ?: "",
                         lastName = profileResponse.data?.user?.lastName ?: ""
@@ -107,7 +98,6 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    // Handlers de cambio (sin cambios)
     fun onNameChange(value: String) {
         _uiState.update { it.copy(name = value, errorMessage = null) }
     }
@@ -115,7 +105,6 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
         _uiState.update { it.copy(lastName = value, errorMessage = null) }
     }
 
-    // Actualizar perfil (actualizado para extraer datos de la estructura correcta)
     fun updateProfile(userId: Int) {
         val currentState = _uiState.value
         _uiState.update { it.copy(isSaving = true, errorMessage = null) }
@@ -126,15 +115,13 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
                 name = currentState.name,
                 lastName = currentState.lastName
             )
-            result.onSuccess { updatedProfileResponse -> // Ahora es GetProfileResponse
+            result.onSuccess { updatedProfileResponse ->
                 _uiState.update {
                     it.copy(
                         isSaving = false,
-                        profileData = updatedProfileResponse, // Guardar respuesta completa
-                        // *** Extraer de updatedProfileResponse.data.user ***
+                        profileData = updatedProfileResponse,
                         name = updatedProfileResponse.data?.user?.name ?: "",
                         lastName = updatedProfileResponse.data?.user?.lastName ?: ""
-                        // El email no cambia, no es necesario actualizarlo aquí
                     )
                 }
                 Log.i("ProfileViewModel", "Perfil actualizado para userId $userId. Data: ${updatedProfileResponse.data?.user}")
@@ -144,13 +131,11 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
                 _uiState.update {
                     it.copy(isSaving = false, errorMessage = exception.message ?: "Error al guardar cambios")
                 }
-                // Considerar si mostrar el mismo mensaje de error en el toast
                 _eventFlow.emit(ProfileEvent.ShowToast("Error al guardar: ${exception.message ?: "Error desconocido"}"))
             }
         }
     }
 
-    // Funciones para selección de directorio (sin cambios respecto a la respuesta anterior)
     fun selectDownloadDirectory() {
         viewModelScope.launch {
             _eventFlow.emit(ProfileEvent.OpenDirectoryPicker)
@@ -190,12 +175,10 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
     }
 
 
-    // Logout (sin cambios)
     fun logout() {
         viewModelScope.launch {
             Log.i("ProfileViewModel", "Cerrando sesión...")
             TokenManager.clearToken()
-            // UserInfoProvider.clearUserInfo() // clearToken debería encargarse si se centraliza allí
             _eventFlow.emit(ProfileEvent.NavigateToLogin)
         }
     }

@@ -1,10 +1,10 @@
 package com.example.pixelprice.core.data
 
-import android.annotation.SuppressLint // Necesario para SharedPreferences estáticas
+import android.annotation.SuppressLint
 import android.content.Context
 import android.content.SharedPreferences
 import android.util.Log
-import androidx.annotation.VisibleForTesting // Opcional para pruebas
+import androidx.annotation.VisibleForTesting
 import java.util.concurrent.TimeUnit
 import androidx.core.content.edit
 
@@ -17,17 +17,13 @@ object TokenManager {
 
     private val SESSION_DURATION_MS = TimeUnit.HOURS.toMillis(12)
 
-    //SuppressLint justificado porque se inicializa en Application.onCreate
     @SuppressLint("StaticFieldLeak")
-    private lateinit var prefs: SharedPreferences // Usar lateinit
+    private lateinit var prefs: SharedPreferences
 
-    // Bandera para asegurar inicialización única
     private var isInitialized = false
-    private val lock = Any() // Para sincronización segura de inicialización
+    private val lock = Any()
 
-    // *** NUEVO: Función de inicialización ***
     fun initialize(context: Context) {
-        // Doble check locking para seguridad en inicialización
         if (!isInitialized) {
             synchronized(lock) {
                 if (!isInitialized) {
@@ -39,7 +35,6 @@ object TokenManager {
         }
     }
 
-    // Helper interno para obtener prefs asegurando inicialización
     private fun requirePrefs(): SharedPreferences {
         check(isInitialized) { "TokenManager no ha sido inicializado. Llama a initialize() en Application.onCreate." }
         return prefs
@@ -52,14 +47,12 @@ object TokenManager {
             putString(KEY_TOKEN, token)
             putLong(KEY_TOKEN_EXPIRY_TIMESTAMP, expiryTimestamp)
             putInt(KEY_USER_ID, userId)
-            // Guardar username, usar un valor por defecto si es nulo para evitar errores
             putString(KEY_USERNAME, username ?: "")
-            apply() // Usar apply para guardar asíncronamente
+            apply()
         }
         Log.d("TokenManager", "Token expira en: ${java.util.Date(expiryTimestamp)}")
     }
 
-    // *** MODIFICADO: getToken ahora verifica la expiración ***
     fun getToken(): String? {
         val prefs = requirePrefs()
         val token = prefs.getString(KEY_TOKEN, null)
@@ -67,38 +60,30 @@ object TokenManager {
         val currentTimestamp = System.currentTimeMillis()
 
         if (token == null || expiryTimestamp == 0L) {
-            // No hay token o timestamp guardado
             return null
         }
 
         if (currentTimestamp >= expiryTimestamp) {
-            // Token expirado
             Log.w("TokenManager", "Token JWT encontrado pero ha expirado. Limpiando...")
-            clearToken() // Limpiar datos expirados
+            clearToken()
             return null
         }
 
-        // Token válido y no expirado
-        // Log.d("TokenManager", "Token JWT válido recuperado.") // Log opcional
         return token
     }
 
-    // *** NUEVOS MÉTODOS: Para obtener ID y Username ***
     fun getUserId(): Int {
-        // Devuelve 0 si no está guardado o no está inicializado
         return if(isInitialized && ::prefs.isInitialized) prefs.getInt(KEY_USER_ID, 0) else 0
     }
 
     fun getUsername(): String? {
-        // Devuelve null si no está guardado
         return if(isInitialized && ::prefs.isInitialized) prefs.getString(KEY_USERNAME, null) else null
     }
 
 
-    // *** MODIFICADO: clearToken ahora limpia todo ***
     fun clearToken() {
         Log.d("TokenManager", "Borrando todos los datos de autenticación (Token, Expiración, UserInfo).")
-        if (isInitialized && ::prefs.isInitialized) { // Asegurarse que prefs está listo
+        if (isInitialized && ::prefs.isInitialized) {
             requirePrefs().edit() {
                 remove(KEY_TOKEN)
                     .remove(KEY_TOKEN_EXPIRY_TIMESTAMP)
@@ -106,23 +91,18 @@ object TokenManager {
                     .remove(KEY_USERNAME)
             }
         }
-        // Llamar a UserInfoProvider para mantener consistencia (aunque ya no se guarde aquí)
-        // Esto limpia la copia en memoria si alguien la está usando.
         UserInfoProvider.clearUserInfo()
     }
 
-    // *** Opcional: Método para verificar si hay sesión activa (token válido) ***
     fun isSessionActive(): Boolean {
         return getToken() != null
     }
 
-    // Opcional: Para pruebas unitarias si necesitas resetear
     @VisibleForTesting
     internal fun resetForTest() {
         synchronized(lock) {
             isInitialized = false
-            // prefs = null // No puedes reasignar lateinit a null, pero puedes limpiar las prefs
-            if (::prefs.isInitialized) { // Verifica si fue inicializada antes de limpiar
+            if (::prefs.isInitialized) {
                 prefs.edit().clear().apply()
             }
         }

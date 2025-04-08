@@ -57,15 +57,13 @@ object BasicViewModelFactory : ViewModelProvider.Factory {
             when {
                 modelClass.isAssignableFrom(LoginViewModel::class.java) ->
                     @Suppress("UNCHECKED_CAST")
-                    LoginViewModel() as T // Constructor sin args
+                    LoginViewModel() as T
 
                 modelClass.isAssignableFrom(RegisterViewModel::class.java) ->
                     @Suppress("UNCHECKED_CAST")
-                    RegisterViewModel() as T // Constructor sin args
+                    RegisterViewModel() as T
 
-                // Añadir otros ViewModels simples aquí si los hubiera en el futuro
                 else ->
-                    // Fallback genérico si no es uno de los anteriores
                     @Suppress("UNCHECKED_CAST")
                     modelClass.getDeclaredConstructor().newInstance() as T
             }
@@ -81,7 +79,6 @@ class ProfileViewModelFactory(private val application: Application) : ViewModelP
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(ProfileViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")
-            // Pasamos la Application al constructor del ViewModel
             return ProfileViewModel(application) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class for ProfileViewModelFactory")
@@ -92,7 +89,7 @@ class LoginViewModelFactory() : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(LoginViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")
-            return LoginViewModel() as T // Login necesita contexto para RegisterDeviceTokenUseCase
+            return LoginViewModel() as T
         }
         throw IllegalArgumentException("Unknown ViewModel class for LoginViewModelFactory")
     }
@@ -102,7 +99,7 @@ class RegisterViewModelFactory() : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(RegisterViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")
-            return RegisterViewModel() as T // Register no parece necesitar contexto directamente, pero mantenemos patrón
+            return RegisterViewModel() as T
         }
         throw IllegalArgumentException("Unknown ViewModel class for RegisterViewModelFactory")
     }

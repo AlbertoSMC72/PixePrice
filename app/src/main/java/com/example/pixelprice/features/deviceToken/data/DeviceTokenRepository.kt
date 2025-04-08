@@ -1,13 +1,11 @@
 package com.example.pixelprice.features.deviceToken.data
 
-// import android.content.Context // Ya no es necesario
 import android.util.Log
 import com.example.pixelprice.core.network.RetrofitHelper
 import com.example.pixelprice.core.service.DeviceTokenService
 import com.example.pixelprice.core.service.RegisterTokenRequest
-import java.io.IOException // Importar IOException
+import java.io.IOException
 
-// Excepciones específicas (opcional)
 sealed class DeviceTokenException(message: String, cause: Throwable? = null) : Exception(message, cause) {
     class NetworkError(cause: Throwable) : DeviceTokenException("Error de red al gestionar token.", cause)
     class ApiError(message: String, val code: Int?) : DeviceTokenException("Error API ($code): $message")
@@ -15,11 +13,9 @@ sealed class DeviceTokenException(message: String, cause: Throwable? = null) : E
 }
 
 
-// *** CORREGIDO: No necesita Context en el constructor ***
 class DeviceTokenRepository {
 
     private val deviceTokenService: DeviceTokenService by lazy {
-        // *** CORREGIDO: Llamar a createService sin contexto ***
         RetrofitHelper.createService(DeviceTokenService::class.java)
     }
 
@@ -51,7 +47,6 @@ class DeviceTokenRepository {
             Log.d("DeviceTokenRepository", "Intentando eliminar token FCM de API: ${fcmToken.take(10)}...")
             val response = deviceTokenService.deleteDeviceToken(fcmToken)
 
-            // 204 No Content también es éxito para DELETE
             if (response.isSuccessful || response.code() == 204) {
                 Log.i("DeviceTokenRepository", "Token FCM eliminado de API exitosamente (o no encontrado).")
                 Result.success(Unit)

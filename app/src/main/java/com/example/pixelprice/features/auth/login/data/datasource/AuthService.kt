@@ -7,6 +7,6 @@ import retrofit2.http.Body
 import retrofit2.http.POST
 
 interface AuthService {
-    @POST("/users/auth/login") // Ruta del backend para login
+    @POST("/users/auth/login")
     suspend fun login(@Body loginRequest: LoginRequest): Response<LoginResponse>
 }

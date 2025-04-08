@@ -28,7 +28,6 @@ import java.io.InputStream
 import java.io.OutputStream
 
 class QuotationRepository(
-    // Necesita contexto para procesar imagen y usar DownloadManager
     private val applicationContext: Context
 ) {
 
@@ -44,13 +43,12 @@ class QuotationRepository(
         applicationContext.getSharedPreferences(PREFS_NAME_PROFILE, Context.MODE_PRIVATE)
     }
 
-    // --- Solicitar Creación de Cotización ---
     suspend fun requestQuotation(
         projectName: String,
         projectDescription: String,
         projectCapital: Double,
         projectIsSelfMade: Boolean,
-        mockupImageUri: Uri? // URI local de la imagen
+        mockupImageUri: Uri?
     ): Result<Unit> {
         val userId = UserInfoProvider.userID
         if (userId == 0) return Result.failure(QuotationException.NotAuthenticated())
@@ -58,12 +56,11 @@ class QuotationRepository(
         Log.d("QuotationRepository", "Preparando solicitud de cotización para: $projectName")
 
         return try {
-            // Convertir datos a RequestBody y MultipartBody.Part
             val namePart = projectName.toTextRequestBody()
             val descriptionPart = projectDescription.toTextRequestBody()
             val capitalPart = projectCapital.toTextRequestBody()
             val isSelfMadePart = projectIsSelfMade.toTextRequestBody()
-            val imagePart = mockupImageUri.toImageMultipartBodyPart(applicationContext) // Usa helper
+            val imagePart = mockupImageUri.toImageMultipartBodyPart(applicationContext)
 
             Log.d("QuotationRepository", "Imagen incluida en request: ${imagePart != null}")
 
@@ -75,7 +72,7 @@ class QuotationRepository(
                 mockupImage = imagePart
             )
 
-            if (response.isSuccessful && response.code() == 202) { // 202 Accepted
+            if (response.isSuccessful && response.code() == 202) {
                 Log.i("QuotationRepository", "Solicitud de cotización aceptada por API para: $projectName")
                 Result.success(Unit)
             } else {
@@ -90,7 +87,6 @@ class QuotationRepository(
         }
     }
 
-    // --- Obtener Lista de Cotizaciones del Usuario ---
     suspend fun getUserQuotations(): Result<List<QuotationListItemDTO>> {
         return try {
             Log.d("QuotationRepository", "Obteniendo cotizaciones para usuario ID: ${UserInfoProvider.userID}")
@@ -109,7 +105,6 @@ class QuotationRepository(
         }
     }
 
-    // --- Encontrar ID de Cotización por Nombre ---
     suspend fun findQuotationIdByName(projectName: String): Result<Int> {
         return try {
             Log.d("QuotationRepository", "Buscando cotización por nombre: $projectName")
@@ -120,7 +115,6 @@ class QuotationRepository(
                     Result.success(body.id)
                 } else {
                     Log.w("QuotationRepository", "API OK pero cuerpo nulo buscando por nombre: $projectName")
-                    // Considerar si 404 debería ser un error o un estado específico
                     Result.failure(QuotationException.NotFound("No se encontró cotización para '$projectName' (cuerpo nulo)."))
                 }
             } else if (response.code() == 404) {
@@ -150,7 +144,6 @@ class QuotationRepository(
                 }
                 Log.d("QuotationRepository", "Directorio de destino leído de prefs: $targetDirectoryUri")
 
-                // Llamar a saveResponseBodyToFile pasando el URI de destino
                 saveResponseBodyToFile(response.body()!!, quotationName, targetDirectoryUri)
                 Result.success(Unit)
             } else {
@@ -169,19 +162,16 @@ class QuotationRepository(
     }
 
 
-    // --- Helpers Internos ---
 
-    // Maneja errores comunes de API
     private fun <T> handleApiError(code: Int, errorBody: String?, context: String = "API"): Result<T> {
         val errorMsg = errorBody ?: "Sin detalles"
         Log.w("QuotationRepository", "Error $context ($code): $errorMsg")
-        // Mapear errores específicos
         return Result.failure(
             when (code) {
                 401 -> QuotationException.NotAuthenticated("No autorizado (401). Verifica el token.")
                 403 -> QuotationException.Forbidden("Acceso prohibido (403).")
                 404 -> QuotationException.NotFound("Recurso no encontrado (404).")
-                409 -> QuotationException.Conflict("Conflicto (409): $errorMsg") // Ej: Cotización ya existe
+                409 -> QuotationException.Conflict("Conflicto (409): $errorMsg")
                 422 -> QuotationException.ValidationError("Datos inválidos (422): $errorMsg")
                 in 500..599 -> QuotationException.ServerError("Error del servidor ($code): $errorMsg")
                 else -> QuotationException.UnknownError("Error $context ($code): $errorMsg")
@@ -197,17 +187,16 @@ class QuotationRepository(
             val mimeType = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
             var outputStream: OutputStream? = null
             var inputStream: InputStream? = null
-            var savedToSelectedFolder = false // Flag para saber dónde se guardó
-            var targetDirName: String? = null // Nombre de la carpeta seleccionada
+            var savedToSelectedFolder = false
+            var targetDirName: String? = null
 
             try {
-                // Intentar usar la carpeta seleccionada por SAF si existe y es válida
                 if (targetDirectoryUri != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
                     Log.d("SaveToFile", "Intentando usar directorio SAF: $targetDirectoryUri")
                     val directory = DocumentFile.fromTreeUri(applicationContext, targetDirectoryUri)
 
                     if (directory != null) {
-                        targetDirName = directory.name // Obtener nombre para el Toast
+                        targetDirName = directory.name
                         Log.d("SaveToFile", "DocumentFile obtenido. Nombre: $targetDirName, Es Directorio: ${directory.isDirectory}, Puede Escribir: ${directory.canWrite()}")
 
                         if (directory.isDirectory && directory.canWrite()) {
@@ -217,7 +206,7 @@ class QuotationRepository(
                                 outputStream = applicationContext.contentResolver.openOutputStream(newFile.uri)
                                 if (outputStream != null) {
                                     Log.i("SaveToFile", "Guardando en directorio SAF seleccionado: ${newFile.uri}")
-                                    savedToSelectedFolder = true // Marcamos éxito con SAF
+                                    savedToSelectedFolder = true
                                 } else {
                                     Log.e("SaveToFile", "Error: openOutputStream devolvió null para ${newFile.uri}")
                                 }
@@ -226,42 +215,35 @@ class QuotationRepository(
                             }
                         } else {
                             Log.w("SaveToFile", "Directorio SAF no es válido o no se puede escribir. Nombre: $targetDirName")
-                            // Podríamos limpiar la preferencia aquí si falla canWrite persistentemente
-                            // profilePrefs.edit { remove(KEY_DOWNLOAD_DIR_URI) }
                         }
                     } else {
                         Log.e("SaveToFile", "Error: DocumentFile.fromTreeUri devolvió null para $targetDirectoryUri")
-                        // Limpiar preferencia si el URI es inválido
                         profilePrefs.edit().remove(KEY_DOWNLOAD_DIR_URI).apply()
                     }
                 } else {
                     Log.d("SaveToFile", "No hay directorio SAF seleccionado o versión Android < Lollipop.")
                 }
 
-                // Si no se pudo guardar con SAF (outputStream sigue null), usar fallback
                 if (outputStream == null) {
                     Log.w("SaveToFile", "Fallback: Guardando en Descargas.")
-                    savedToSelectedFolder = false // Asegurar que el flag es false
+                    savedToSelectedFolder = false
                     targetDirName = null
                     outputStream = saveToDownloadsFallback(fileName, mimeType)
                 }
 
-                // Si AÚN no se pudo obtener un OutputStream (ni con SAF ni con fallback)
                 if (outputStream == null) {
                     throw IOException("No se pudo obtener un flujo de salida válido para guardar el archivo.")
                 }
 
-                // --- Escritura del archivo ---
                 inputStream = body.byteStream()
                 Log.d("SaveToFile", "Iniciando copia de bytes...")
                 val copied = inputStream.copyTo(outputStream)
                 Log.i("SaveToFile", "Archivo guardado. Bytes copiados: $copied. En carpeta seleccionada: $savedToSelectedFolder")
 
-                // --- Mensaje Toast Mejorado ---
                 val finalMessage = if (savedToSelectedFolder && targetDirName != null) {
                     "Guardado en '$targetDirName': $fileName"
                 } else {
-                    "Guardado en Descargas: $fileName" // Mensaje fallback
+                    "Guardado en Descargas: $fileName"
                 }
 
                 withContext(Dispatchers.Main) {
@@ -273,7 +255,6 @@ class QuotationRepository(
                 withContext(Dispatchers.Main) {
                     Toast.makeText(applicationContext, "Error al guardar descarga: ${e.message}", Toast.LENGTH_SHORT).show()
                 }
-                // Relanzar para que el UseCase/ViewModel lo capture como fallo
                 throw IOException("Error al guardar el archivo: ${e.message}", e)
             } finally {
                 try { inputStream?.close() } catch (e: IOException) { Log.e("SaveToFile", "Error cerrando InputStream", e) }
@@ -284,9 +265,7 @@ class QuotationRepository(
 
     @Throws(IOException::class)
     private fun saveToDownloadsFallback(fileName: String, mimeType: String): OutputStream? {
-        // ... (código existente sin cambios) ...
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            // API 29+ (Android 10+) - MediaStore
             val resolver = applicationContext.contentResolver
             val contentValues = ContentValues().apply {
                 put(MediaStore.MediaColumns.DISPLAY_NAME, fileName)
@@ -297,7 +276,6 @@ class QuotationRepository(
                 ?: throw IOException("Error al crear entrada en MediaStore (fallback) para $fileName")
             return resolver.openOutputStream(uri)
         } else {
-            // API < 29 (Android < 10) - Acceso directo
             val downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
             if (!downloadsDir.exists() && !downloadsDir.mkdirs()) {
                 throw IOException("No se pudo crear el directorio de Descargas (fallback).")
@@ -310,7 +288,6 @@ class QuotationRepository(
 }
 
 
-// Excepciones específicas para Cotizaciones
 sealed class QuotationException(message: String, cause: Throwable? = null) : Exception(message, cause) {
     class NetworkError(cause: Throwable, message: String = "Error de red. Verifica tu conexión.") : QuotationException(message, cause)
     class UnknownError(message: String, cause: Throwable? = null) : QuotationException(message, cause)

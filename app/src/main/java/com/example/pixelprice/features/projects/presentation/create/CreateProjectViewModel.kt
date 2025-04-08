@@ -9,7 +9,6 @@ import com.example.pixelprice.features.projects.domain.usecases.CreateProjectUse
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
-// Para errores de validación específicos
 enum class ValidationErrorType { NAME, DESCRIPTION, CAPITAL }
 data class ValidationError(val type: ValidationErrorType, val message: String)
 
@@ -19,8 +18,8 @@ data class CreateProjectUiState(
     val capital: String = "",
     val isSelfMade: Boolean = false,
     val isLoading: Boolean = false,
-    val validationError: ValidationError? = null, // Error de campo específico
-    val generalErrorMessage: String? = null      // Error general (ej. duplicado)
+    val validationError: ValidationError? = null,
+    val generalErrorMessage: String? = null
 )
 
 sealed class CreateProjectEvent {
@@ -45,12 +44,9 @@ class CreateProjectViewModel(application: Application) : AndroidViewModel(applic
         _uiState.update { it.copy(description = newDesc, validationError = null, generalErrorMessage = null) }
     }
     fun onCapitalChange(newCapital: String) {
-        // Permitir solo números y un punto decimal, y limpiar errores
         if (newCapital.isEmpty() || (newCapital.count { it == '.' } <= 1 && newCapital.all { it.isDigit() || it == '.' })) {
             _uiState.update { it.copy(capital = newCapital, validationError = null, generalErrorMessage = null) }
         } else {
-            // Opcional: Mostrar feedback inmediato si introduce caracter inválido
-            // viewModelScope.launch { _eventFlow.emit(CreateProjectEvent.ShowToast("Solo números y un punto decimal")) }
         }
     }
     fun onSelfMadeChange(checked: Boolean) {
@@ -79,23 +75,22 @@ class CreateProjectViewModel(application: Application) : AndroidViewModel(applic
             isValid = false
         }
 
-        _uiState.update { it.copy(validationError = error, generalErrorMessage = null) } // Actualiza error de validación
+        _uiState.update { it.copy(validationError = error, generalErrorMessage = null) }
         return isValid
     }
 
 
     fun createProject() {
         if (!validateInputs()) {
-            return // Detener si la validación falla
+            return
         }
 
-        val currentState = _uiState.value // Obtener estado después de validar
+        val currentState = _uiState.value
         val name = currentState.name.trim()
         val description = currentState.description.trim()
-        // La validación asegura que capital.toDouble() no fallará aquí
         val capitalDouble = currentState.capital.trim().toDouble()
 
-        _uiState.update { it.copy(isLoading = true, generalErrorMessage = null) } // Limpiar error general
+        _uiState.update { it.copy(isLoading = true, generalErrorMessage = null) }
 
         viewModelScope.launch {
             val result = createProjectUseCase(
@@ -115,10 +110,8 @@ class CreateProjectViewModel(application: Application) : AndroidViewModel(applic
                     is ProjectException.NameAlreadyExists -> "El nombre '$name' ya está en uso. Elige otro."
                     else -> exception.message ?: "Error desconocido al guardar."
                 }
-                // Mostrar como error general, no de campo específico
                 _uiState.update { it.copy(generalErrorMessage = errorMsg, validationError = null) }
             }
-            // Quitar estado de carga independientemente del resultado
             _uiState.update { it.copy(isLoading = false) }
         }
     }

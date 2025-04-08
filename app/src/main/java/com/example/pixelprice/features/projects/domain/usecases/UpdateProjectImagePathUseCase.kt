@@ -9,7 +9,6 @@ class UpdateProjectImagePathUseCase {
         if (projectId <= 0) {
             return Result.failure(IllegalArgumentException("ID de proyecto inválido."))
         }
-        // Aquí podrías añadir validación del path si fuera necesario
         return repository.updateProjectImageUri(projectId, imagePath)
     }
 }

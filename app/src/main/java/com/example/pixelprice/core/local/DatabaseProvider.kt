@@ -20,9 +20,9 @@ object DatabaseProvider {
                 if (!isInitialized) {
                     projectDatabase = Room.databaseBuilder(
                         context.applicationContext,
-                        ProjectDatabase::class.java, // Usar ProjectDatabase
+                        ProjectDatabase::class.java,
                         DATABASE_NAME
-                    ).fallbackToDestructiveMigration() // TODO: Implementar migraciones reales
+                    ).fallbackToDestructiveMigration()
                         .build()
                     isInitialized = true
                     Log.d("DatabaseProvider", "ProjectDatabase Inicializado.")

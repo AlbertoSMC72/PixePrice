@@ -38,8 +38,7 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
 
 
-// Objeto IntentHandler (sin cambios)
-object IntentHandler { /* ... */
+object IntentHandler {
     private val _navIntentFlow = MutableSharedFlow<Intent>(extraBufferCapacity = 1)
     val navIntentFlow = _navIntentFlow.asSharedFlow()
 
@@ -48,11 +47,10 @@ object IntentHandler { /* ... */
     }
 }
 
-// MainViewModel y Factory (sin cambios funcionales)
 class MainViewModel(application: android.app.Application) : AndroidViewModel(application) {
     private val findProjectByNameUseCase = FindProjectByNameUseCase()
     private val updateProjectQuotationStatusUseCase = UpdateProjectQuotationStatusUseCase()
-    fun updateProjectStatusFromNotification(projectName: String?, quotationId: Int?) { /* ... (lógica igual) ... */
+    fun updateProjectStatusFromNotification(projectName: String?, quotationId: Int?) {
         if (projectName == null || quotationId == null || quotationId <= 0) {
             Log.w("MainViewModel", "Datos inválidos desde notificación: Name=$projectName, ID=$quotationId")
             return
@@ -64,7 +62,7 @@ class MainViewModel(application: android.app.Application) : AndroidViewModel(app
                 val updateResult = updateProjectQuotationStatusUseCase(
                     projectId = projectEntity.id,
                     quotationId = quotationId,
-                    isPending = false // Marcar como NO pendiente
+                    isPending = false
                 )
                 if (updateResult.isSuccess) {
                     Log.i("MainViewModel", "Estado del proyecto local '${projectEntity.name}' (ID: ${projectEntity.id}) actualizado por notificación.")
@@ -77,7 +75,7 @@ class MainViewModel(application: android.app.Application) : AndroidViewModel(app
         }
     }
 }
-class MainViewModelFactory(private val application: android.app.Application) : ViewModelProvider.Factory { /* ... (igual) ... */
+class MainViewModelFactory(private val application: android.app.Application) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(MainViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")
@@ -88,7 +86,6 @@ class MainViewModelFactory(private val application: android.app.Application) : V
 }
 
 
-// MainActivity (sin cambios funcionales)
 class MainActivity : ComponentActivity() {
 
     private val requestPermissionLauncher = registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted: Boolean ->
@@ -105,19 +102,18 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             val navController = rememberNavController()
-            // Usar la factory correcta que necesita Application
             val mainViewModel: MainViewModel = viewModel(factory = MainViewModelFactory(application))
             MainApp(navController = navController, mainViewModel = mainViewModel)
         }
     }
 
-    override fun onNewIntent(intent: Intent) { /* ... (igual) ... */
+    override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
         IntentHandler.newIntent(intent)
         Log.d("MainActivity", "onNewIntent llamado.")
     }
-    private fun askNotificationPermission() { /* ... (igual) ... */
+    private fun askNotificationPermission() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             val permission = Manifest.permission.POST_NOTIFICATIONS
             when {
@@ -139,7 +135,6 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-// MainApp Composable (sin cambios funcionales)
 @Composable
 fun MainApp(navController: NavHostController, mainViewModel: MainViewModel) {
     var processedIntentHash by remember { mutableStateOf<Int?>(null) }
@@ -149,7 +144,6 @@ fun MainApp(navController: NavHostController, mainViewModel: MainViewModel) {
     LaunchedEffect(Unit) {
         lifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
             IntentHandler.navIntentFlow.collect { intent ->
-                // ... (lógica de manejo de intent igual) ...
                 val intentHash = intent.hashCode()
                 Log.d("MainAppComposable", "Intent recibido en colector: ${intent.action}, Hash: $intentHash")
 
@@ -165,7 +159,6 @@ fun MainApp(navController: NavHostController, mainViewModel: MainViewModel) {
                     mainViewModel.updateProjectStatusFromNotification(projectName, quotationId)
 
                 } else {
-                    // ... (logging de otros casos igual) ...
                     if (intentHash == processedIntentHash) {
                         Log.d("MainAppComposable", "Intent ya procesado (hash: $intentHash).")
                     } else if (isQuotationReady){

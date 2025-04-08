@@ -1,13 +1,11 @@
 package com.example.pixelprice.features.auth.register.data.repository
 
 import android.util.Log
-import com.example.pixelprice.core.network.RetrofitHelper // Acceso directo
-// Importa excepciones personalizadas (puedes definirlas aquí o en un archivo común)
-import com.example.pixelprice.features.auth.login.data.repository.ApiException // Reutilizar si aplica
+import com.example.pixelprice.core.network.RetrofitHelper
+import com.example.pixelprice.features.auth.login.data.repository.ApiException
 import com.example.pixelprice.features.auth.register.data.datasource.RegisterService
 import com.example.pixelprice.features.auth.register.data.model.CreateUserRequest
 import com.example.pixelprice.features.auth.register.data.model.UserDTO
-// import com.example.pixelprice.features.authorization.register.data.model.UsernameValidateDTO // Eliminado si no se usa
 import java.io.IOException
 
 class RegisterRepository {
@@ -53,7 +51,7 @@ class RegisterRepository {
 
 sealed class RegisterException(message: String, cause: Throwable? = null) : Exception(message, cause) {
     class BadRequest(details: String, message: String = "Datos inválidos: $details") : RegisterException(message)
-    class Conflict(details: String, message: String = "Conflicto: $details") : RegisterException(message) // Email/User ya existe
+    class Conflict(details: String, message: String = "Conflicto: $details") : RegisterException(message)
     class NetworkError(cause: Throwable) : RegisterException("Error de red. Verifica tu conexión.", cause)
     class UnknownError(cause: Throwable) : RegisterException("Error inesperado al registrar.", cause)
 }

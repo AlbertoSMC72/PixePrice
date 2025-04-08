@@ -11,12 +11,10 @@ class CreateProjectUseCase {
         description: String,
         capital: Double,
         isSelfMade: Boolean
-    ): Result<Long> { // Devuelve el ID del proyecto creado
-        // Validación básica
+    ): Result<Long> {
         if (name.isBlank() || description.isBlank() || capital < 0) {
             return Result.failure(IllegalArgumentException("Datos del proyecto inválidos."))
         }
-        // La comprobación de unicidad y la creación se manejan en el repositorio
         return repository.createProject(name, description, capital, isSelfMade)
     }
 }

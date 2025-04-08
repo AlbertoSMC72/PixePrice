@@ -40,7 +40,6 @@ fun ProfileScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
 
-// Launcher para el selector de directorios
     val directoryPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocumentTree(),
         onResult = { uri: Uri? ->
@@ -48,14 +47,12 @@ fun ProfileScreen(
         }
     )
 
-    // Cargar perfil al iniciar (si cambia userId)
     LaunchedEffect(userId) {
-        if (userId != 0) { // Evitar cargar si el ID es inválido
+        if (userId != 0) {
             viewModel.loadProfile(userId)
         }
     }
 
-    // Manejar eventos del ViewModel
     LaunchedEffect(Unit) {
         viewModel.eventFlow.collectLatest { event ->
             when (event) {
@@ -126,7 +123,7 @@ fun ProfileScreen(
                     Button(onClick = { viewModel.loadProfile(userId) }) { Text("Reintentar") }
                 }
 
-                uiState.profileData?.data?.user != null -> { // Mostrar formulario si hay datos
+                uiState.profileData?.data?.user != null -> {
                     Icon(
                         Icons.Default.AccountCircle,
                         contentDescription = null,
@@ -135,18 +132,16 @@ fun ProfileScreen(
                     )
                     Spacer(modifier = Modifier.height(24.dp))
 
-                    // --- Campos del Perfil ---
 
-                    // Email (Solo Lectura)
                     OutlinedTextField(
                         value = uiState.email,
-                        onValueChange = { /* No hacer nada */ },
+                        onValueChange = {  },
                         label = { Text("Correo electrónico") },
                         leadingIcon = { Icon(Icons.Default.Email, contentDescription = null) },
                         modifier = Modifier.fillMaxWidth(),
-                        readOnly = true, // Hacerlo solo lectura
+                        readOnly = true,
                         colors = TextFieldDefaults.outlinedTextFieldColors(
-                            disabledTextColor = Beige.copy(alpha = 0.7f), // Color texto deshabilitado
+                            disabledTextColor = Beige.copy(alpha = 0.7f),
                             disabledBorderColor = LightGray.copy(alpha = 0.5f),
                             disabledLabelColor = LightGray,
                             disabledLeadingIconColor = LightGray
@@ -154,7 +149,6 @@ fun ProfileScreen(
                     )
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    // Nombre (Editable)
                     OutlinedTextField(
                         value = uiState.name,
                         onValueChange = viewModel::onNameChange,
@@ -164,15 +158,14 @@ fun ProfileScreen(
                                 Icons.Default.PersonOutline,
                                 contentDescription = null
                             )
-                        }, // Icono diferente
+                        },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
-                        colors = profileTextFieldColors() // Usar helper de colores
+                        colors = profileTextFieldColors()
                     )
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    // Apellidos (Editable)
                     OutlinedTextField(
                         value = uiState.lastName,
                         onValueChange = viewModel::onLastNameChange,
@@ -182,11 +175,11 @@ fun ProfileScreen(
                                 Icons.Default.Badge,
                                 contentDescription = null
                             )
-                        }, // Icono diferente
+                        },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
-                        colors = profileTextFieldColors() // Usar helper de colores
+                        colors = profileTextFieldColors()
                     )
                     Spacer(modifier = Modifier.height(24.dp))
 
@@ -232,8 +225,7 @@ fun ProfileScreen(
                     Spacer(modifier = Modifier.height(24.dp))
 
 
-                    // Mostrar error de guardado si existe
-                    if (uiState.errorMessage != null && !uiState.isLoading) { // No mostrar error de carga aquí
+                    if (uiState.errorMessage != null && !uiState.isLoading) {
                         Text(
                             text = uiState.errorMessage!!,
                             color = Coral,
@@ -270,16 +262,15 @@ fun ProfileScreen(
                     }
                 }
 
-                else -> { // Estado inicial mientras carga o si profileData es null sin error
+                else -> {
                     Spacer(modifier = Modifier.height(64.dp))
                     Text("Cargando perfil...", color = LightGray)
                 }
-            } // Fin When
-        } // Fin Column
-    } // Fin Scaffold
+            }
+        }
+    }
 }
 
-// Helper para colores de TextField del perfil
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun profileTextFieldColors() = TextFieldDefaults.outlinedTextFieldColors(
@@ -290,19 +281,17 @@ private fun profileTextFieldColors() = TextFieldDefaults.outlinedTextFieldColors
     unfocusedLabelColor = LightGray,
     focusedTextColor = Beige,
     unfocusedTextColor = Beige.copy(alpha = 0.8f),
-    focusedLeadingIconColor = Beige, // Color icono enfocado
-    unfocusedLeadingIconColor = LightGray // Color icono desenfocado
-    // No incluimos colores de error aquí, se manejan globalmente
+    focusedLeadingIconColor = Beige,
+    unfocusedLeadingIconColor = LightGray
 )
 
 private fun getDisplayPath(context: Context, uriString: String?): String {
     if (uriString == null) return "Predeterminada (Descargas)"
     return try {
         val uri = Uri.parse(uriString)
-        // Usar DocumentFile para intentar obtener el nombre real del directorio
         val directory = DocumentFile.fromTreeUri(context, uri)
         if (directory != null && directory.isDirectory) {
-            "Seleccionada: '${directory.name}'" // Mostrar nombre real si es posible
+            "Seleccionada: '${directory.name}'"
         } else {
             Log.w("ProfileScreen", "No se pudo obtener nombre para URI: $uriString")
             "Carpeta Seleccionada (inválida?)"

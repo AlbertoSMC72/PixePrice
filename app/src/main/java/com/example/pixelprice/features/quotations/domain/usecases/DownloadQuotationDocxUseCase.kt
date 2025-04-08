@@ -11,7 +11,6 @@ class DownloadQuotationDocxUseCase(context: Context) {
         if (quotationName.isBlank()) {
             return Result.failure(IllegalArgumentException("Nombre de cotización inválido."))
         }
-        // El repositorio maneja la lógica de descarga y el Result
         return repository.downloadQuotationDocx(quotationName)
     }
 }

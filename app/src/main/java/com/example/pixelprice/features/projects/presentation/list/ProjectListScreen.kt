@@ -8,7 +8,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.* // Importar todos los iconos filled
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -28,21 +28,18 @@ fun ProjectListScreen(
     onNavigateToCreate: () -> Unit,
     onNavigateToDetail: (Int) -> Unit,
     onNavigateToProfile: () -> Unit,
-    // Eliminado: onNavigateToQuotationList
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Mis Proyectos", color = Beige) }, // Título simplificado
+                title = { Text("Mis Proyectos", color = Beige) },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Teal),
                 actions = {
-                    // Botón para ir al perfil
                     IconButton(onClick = onNavigateToProfile) {
                         Icon(Icons.Default.Person, contentDescription = "Perfil", tint = Beige)
                     }
-                    // Botón para refrescar
                     IconButton(onClick = { Log.d("ProjectListVM", "Iniciando flujo de proyectos...") }, enabled = !uiState.isLoading) {
                         Icon(
                             imageVector = Icons.Filled.Refresh,
@@ -50,7 +47,6 @@ fun ProjectListScreen(
                             tint = if (uiState.isLoading) LightGray else Beige
                         )
                     }
-                    // Eliminado: IconButton(onClick = onNavigateToQuotationList)
                 }
             )
         },
@@ -112,7 +108,7 @@ fun ProjectListScreen(
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         items(uiState.projects, key = { project -> project.id }) { project ->
-                            ProjectCard( // Usar el ProjectCard definido abajo
+                            ProjectCard(
                                 project = project,
                                 onClick = { onNavigateToDetail(project.id) }
                             )
@@ -139,27 +135,25 @@ fun ProjectCard(project: ProjectEntity, onClick: () -> Unit) {
     ) {
         Row(
             modifier = Modifier.padding(16.dp).fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically // Alinear verticalmente
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            // Columna para texto (ocupa espacio disponible)
             Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
                 Text(
                     text = project.name,
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis // Cortar nombre largo
+                    overflow = TextOverflow.Ellipsis
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = project.description,
                     style = MaterialTheme.typography.bodyMedium,
                     color = GrayBlue,
-                    maxLines = 2, // Limitar descripción
+                    maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
                 Spacer(modifier = Modifier.height(8.dp))
-                // Mostrar estado de cotización
                 val statusText: String
                 val statusColor: androidx.compose.ui.graphics.Color
                 when {
@@ -169,7 +163,7 @@ fun ProjectCard(project: ProjectEntity, onClick: () -> Unit) {
                     }
                     project.lastQuotationId != null -> {
                         statusText = "Cotización Lista"
-                        statusColor = MaterialTheme.colorScheme.primary // Verde o azul del tema
+                        statusColor = MaterialTheme.colorScheme.primary
                     }
                     else -> {
                         statusText = "Sin Cotizar"
@@ -178,16 +172,15 @@ fun ProjectCard(project: ProjectEntity, onClick: () -> Unit) {
                 }
                 Text(
                     text = statusText,
-                    style = MaterialTheme.typography.labelSmall, // Etiqueta pequeña
+                    style = MaterialTheme.typography.labelSmall,
                     color = statusColor,
                     fontWeight = FontWeight.Medium
                 )
             }
-            // Icono indicativo a la derecha
             Icon(
                 imageVector = Icons.Filled.ChevronRight,
                 contentDescription = "Ver detalles",
-                tint = Teal.copy(alpha = 0.7f) // Un poco más tenue
+                tint = Teal.copy(alpha = 0.7f)
             )
         }
     }

@@ -18,13 +18,12 @@ import com.example.pixelprice.ui.theme.*
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProcessingScreen(
-    projectId: Int, // Recibe ID solo para contexto, no se usa activamente aquí
+    projectId: Int,
     onNavigateBack: () -> Unit
 ) {
     Scaffold(
         topBar = {
             TopAppBar(
-                // Título genérico ya que no tenemos los detalles aquí
                 title = { Text("Solicitud Enviada", color = Beige) },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Teal),
                 navigationIcon = {
@@ -58,7 +57,7 @@ fun ProcessingScreen(
                 Spacer(modifier = Modifier.height(24.dp))
                 Text(
                     "Solicitud enviada correctamente.",
-                    fontSize = 20.sp, // Un poco más pequeño
+                    fontSize = 20.sp,
                     fontWeight = FontWeight.Bold,
                     color = Beige,
                     textAlign = TextAlign.Center

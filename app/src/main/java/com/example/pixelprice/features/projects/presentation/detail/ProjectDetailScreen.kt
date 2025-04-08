@@ -19,7 +19,7 @@ import kotlinx.coroutines.flow.collectLatest
 import android.Manifest
 import android.net.Uri
 import android.util.Log
-import android.os.Build // Necesario para comprobación de versión
+import android.os.Build
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -51,7 +51,6 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-// Helper para formatear timestamp (Completo)
 fun formatTimestamp(timestamp: Long): String {
     return try {
         val sdf = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault())
@@ -79,7 +78,6 @@ fun ProjectDetailScreen(
 
     var tempCameraImageUri by remember { mutableStateOf<Uri?>(null) }
 
-    // --- Launchers de Permisos y Actividades ---
 
     val galleryLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         uri?.let { viewModel.onImageSelected(it) }
@@ -90,7 +88,7 @@ fun ProjectDetailScreen(
         } else {
             Toast.makeText(context, "Permiso de galería denegado", Toast.LENGTH_SHORT).show()
         }
-        viewModel.onGalleryPermissionResult(granted) // Notificar al VM
+        viewModel.onGalleryPermissionResult(granted)
     }
 
     val cameraLauncher = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { success ->
@@ -107,7 +105,7 @@ fun ProjectDetailScreen(
     }
 
     val legacyWritePermissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-        viewModel.onLegacyWritePermissionResult(granted) // Notificar al VM
+        viewModel.onLegacyWritePermissionResult(granted)
     }
 
     LaunchedEffect(Unit) {
@@ -119,7 +117,6 @@ fun ProjectDetailScreen(
                 is ProjectDetailEvent.RequestGalleryPermission -> galleryPermissionLauncher.launch(event.permission)
                 is ProjectDetailEvent.RequestLegacyWritePermission -> legacyWritePermissionLauncher.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE)
 
-                // *** NUEVO: Manejar el evento para lanzar la galería ***
                 is ProjectDetailEvent.LaunchGallery -> {
                     try {
                         Log.d("ProjectDetailScreen", "Evento LaunchGallery recibido, lanzando galería...")
@@ -165,7 +162,7 @@ fun ProjectDetailScreen(
                             color = Coral,
                             textAlign = TextAlign.Center
                         )
-                        Spacer(modifier = Modifier.height(8.dp)) // Añadir espacio
+                        Spacer(modifier = Modifier.height(8.dp))
                         Button(onClick = { viewModel.loadProject(projectId)}){ Text("Reintentar")}
                     }
                 }
@@ -177,28 +174,20 @@ fun ProjectDetailScreen(
                             .padding(16.dp)
                             .verticalScroll(rememberScrollState())
                     ) {
-                        // --- Detalles del Proyecto ---
                         Text(
-                            "Detalles del Proyecto:", // Título de la sección
-                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold), // Estilo para el título
-                            color = LightGray, // Color del título
-                            modifier = Modifier.padding(bottom = 8.dp) // Espacio debajo del título
+                            "Detalles del Proyecto:",
+                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+                            color = LightGray,
+                            modifier = Modifier.padding(bottom = 8.dp)
                         )
-                        // Contenedor opcional para agrupar visualmente los detalles
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .background(Beige.copy(alpha = 0.05f), RoundedCornerShape(6.dp)) // Fondo muy sutil y bordes redondeados
-                                .padding(horizontal = 12.dp, vertical = 8.dp) // Padding interno
+                                .background(Beige.copy(alpha = 0.05f), RoundedCornerShape(6.dp))
+                                .padding(horizontal = 12.dp, vertical = 8.dp)
                         ) {
-                            // Iterar sobre la descripción parseada del UiState
                             uiState.parsedDescription.forEachIndexed { index, (label, value) ->
-                                // Usamos el Composable DetailItem existente para mantener la consistencia
                                 DetailItem(label = label, value = value)
-                                // No añadir Divider después del último ítem
-                                // if (index < uiState.parsedDescription.lastIndex) {
-                                // Divider(color = LightGray.copy(alpha = 0.15f), thickness = 0.5.dp) // Divisor más sutil
-                                // }
                             }
                         }
 
@@ -208,7 +197,6 @@ fun ProjectDetailScreen(
                         DetailItem(label = "Creado", value = formatTimestamp(project.createdAt))
                         Spacer(modifier = Modifier.height(20.dp))
 
-                        // --- Sección de Imagen ---
                         Text("Mockup / Imagen Adjunta:", style = MaterialTheme.typography.titleMedium, color = LightGray)
                         Spacer(modifier = Modifier.height(8.dp))
 
@@ -235,7 +223,6 @@ fun ProjectDetailScreen(
                         }
                         Spacer(modifier = Modifier.height(12.dp))
 
-                        // --- Botones para seleccionar imagen ---
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceEvenly
@@ -253,7 +240,6 @@ fun ProjectDetailScreen(
                         }
                         Spacer(modifier = Modifier.height(24.dp))
 
-                        // --- Mostrar error específico de acciones ---
                         if (uiState.errorMessage != null) {
                             Text(
                                 text = uiState.errorMessage!!,
@@ -264,11 +250,9 @@ fun ProjectDetailScreen(
                             )
                         }
 
-                        // --- Botones de Acción ---
                         val canRequestQuote = !project.hasPendingQuotation && !uiState.isRequestingQuote
                         val canDownloadQuote = !project.hasPendingQuotation
 
-                        // Botón Solicitar Cotización (Completo)
                         Button(
                             onClick = { viewModel.requestQuotation() },
                             modifier = Modifier.fillMaxWidth().height(50.dp),
@@ -276,8 +260,8 @@ fun ProjectDetailScreen(
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = if(canRequestQuote) LightGray else GrayBlue,
                                 contentColor = Beige,
-                                disabledContainerColor = GrayBlue.copy(alpha = 0.7f), // Color deshabilitado
-                                disabledContentColor = LightGray.copy(alpha = 0.7f) // Color texto deshabilitado
+                                disabledContainerColor = GrayBlue.copy(alpha = 0.7f),
+                                disabledContentColor = LightGray.copy(alpha = 0.7f)
                             )
                         ) {
                             when {
@@ -292,7 +276,6 @@ fun ProjectDetailScreen(
                         }
                         Spacer(modifier = Modifier.height(12.dp))
 
-                        // Botón Descargar Reporte (Completo)
                         Button(
                             onClick = { viewModel.downloadQuotationReport() },
                             modifier = Modifier.fillMaxWidth().height(50.dp),
@@ -300,8 +283,8 @@ fun ProjectDetailScreen(
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = if(canDownloadQuote) Beige else GrayBlue,
                                 contentColor = if(canDownloadQuote) Teal else LightGray,
-                                disabledContainerColor = GrayBlue.copy(alpha = 0.7f), // Color deshabilitado
-                                disabledContentColor = LightGray.copy(alpha = 0.7f) // Color texto deshabilitado
+                                disabledContainerColor = GrayBlue.copy(alpha = 0.7f),
+                                disabledContentColor = LightGray.copy(alpha = 0.7f)
                             )
                         ) {
                             if (uiState.isDownloadingQuote) {
@@ -312,20 +295,18 @@ fun ProjectDetailScreen(
                                 Text("Descargar Reporte", fontWeight = FontWeight.Bold)
                             }
                         }
-                        Spacer(modifier = Modifier.height(16.dp)) // Espacio al final
+                        Spacer(modifier = Modifier.height(16.dp))
 
-                    } // Fin Column principal
+                    }
                 }
-                // Estado inicial/inesperado mientras carga o si project es null pero sin error
                 else -> {
                     CircularProgressIndicator(modifier = Modifier.align(Alignment.Center), color = Beige)
                 }
-            } // Fin when
-        } // Fin Box
-    } // Fin Scaffold
+            }
+        }
+    }
 }
 
-// DetailItem Composable (Completo y sin cambios)
 @Composable
 fun DetailItem(label: String, value: String) {
     Column(modifier = Modifier.padding(bottom = 8.dp)) {
